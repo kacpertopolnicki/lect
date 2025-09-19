@@ -1,0 +1,52 @@
+[paper]
+
+# width of paper / height of paper
+aspectratio = 1.7777
+
+[window]
+
+# initial size of window
+width = 896
+height = 506
+
+[default_pallete]
+
+paper_color = 39,76,67
+
+color_0 = 0.001 , 10 , 10 , 10 , 255
+color_1 = 0.002 , 200 , 200 , 200 , 255
+color_2 = 0.002 , 200 , 10 , 10 , 255
+color_3 = 0.002 , 10 , 200 , 10 , 255
+color_4 = 0.002 , 10 , 10 , 200 , 255
+color_5 = 0.004 , 200 , 200 , 200 , 255
+color_6 = 0.004 , 200 , 10 , 10 , 255
+color_7 = 0.004 , 10 , 200 , 10 , 255
+color_8 = 0.004 , 10 , 10 , 200 , 255
+color_9 = 0.001 , 50 , 50 , 50 , 255
+
+[light_pallete]
+
+paper_color = 255,255,255
+
+color_0 = 0.001 , 10 , 10 , 10 , 255
+color_1 = 0.002 , 55 , 55 , 55 , 255
+color_2 = 0.002 , 200 , 10 , 10 , 255
+color_3 = 0.002 , 10 , 200 , 10 , 255
+color_4 = 0.002 , 10 , 10 , 200 , 255
+color_5 = 0.004 , 55 , 55 , 55 , 255
+color_6 = 0.004 , 200 , 10 , 10 , 255
+color_7 = 0.004 , 10 , 200 , 10 , 255
+color_8 = 0.004 , 10 , 10 , 200 , 255
+color_9 = 0.001 , 50 , 50 , 50 , 255
+
+[frames]
+
+preview_width = 896
+preview_height = 506
+width = 1920
+height = 1080
+antialias = 2
+every = 10
+pause = 24
+frame_rate = 24
+preview_command = mpv --loop
