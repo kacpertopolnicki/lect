@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import os
+import configparser
+import record
+import recordclient
+import pickle
+import argparse
+import curses
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog = "lect")
+    parser.add_argument("output" , help = "Path to output file.")
+    parser.add_argument("-l" , "--load" , help = "Path to file with saved lect data.")
+    parser.add_argument("-s" , "--save" , help = "Path to file to save lect data.")
+    parser.add_argument("-p" , "--printout" , help = "Path to directory for printout." , default = None)
+    args = parser.parse_args()
+
+    rec = None
+
+    if args.load is not None:
+        with open(args.load , "rb") as f:
+            rec = pickle.load(f)
+
+    else:
+
+        LECT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+
+        config = configparser.ConfigParser()
+        config.read(os.path.join(LECT_DIRECTORY , "config"))
+
+        rec = record.Record(config ,
+                            dark_pallete = "default_pallete" ,
+                            light_pallete = "light_pallete")
+
+    record_client = recordclient.RecordClient(args.output , rec ,
+                                              dark_pallete = "default_pallete" ,
+                                              light_pallete = "light_pallete" ,
+                                              printout = args.printout)
+    record_client.run()
+
+    if args.save is not None:
+        with open(args.save , "wb") as f:
+            pickle.dump(rec , f)
+
+    curses.echo()
+    curses.endwin()
