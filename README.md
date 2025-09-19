@@ -1,0 +1,2 @@
+# lect
+Recorder for lectures.
