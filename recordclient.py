@@ -17,17 +17,7 @@ from record import State , Record
 
 RECORD_CLIENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-# sauce : https://www.geeksforgeeks.org/python/logging-in-python/ 
-#logging.basicConfig(filename = os.path.join(RECORD_DIRECTORY , "log_recordclient") , 
-#                    filemode = "w" , 
-#                    format='%(message)s   [%(levelname)s|%(filename)s|%(lineno)d]')
-#logger = logging.getLogger()
-#logger.setLevel(logging.DEBUG)
-
 class RecordClient:
-    # objects of this type
-    # are calling methods on Record
-    # consider adding W
     def __init__(self , output , record , dark_pallete = "default_pallete" , light_pallete = "default_pallete" , printout = None):
 
         # OUTPUT
@@ -72,7 +62,7 @@ class RecordClient:
         self._dark_pallete = dark_pallete
         self._light_pallete = light_pallete
         self._pallete = dark_pallete
-        self.set_colors(self._pallete)
+        self._set_colors(self._pallete)
 
         self._color = 1
 
@@ -98,7 +88,7 @@ class RecordClient:
         # CURSES
 
         self._curses_screen = curses.initscr()
-        self.update_curses_screen()
+        self._update_curses_screen()
 
         # WINDOW
         
@@ -121,7 +111,7 @@ class RecordClient:
         @self._window.event
         def on_draw():
             self._window.clear()
-            x0 , y0 , x1 , y1 = self.get_rectangle()
+            x0 , y0 , x1 , y1 = self._get_rectangle()
 
             self._paper_batch = pyglet.graphics.Batch()
             self._paper = pyglet.shapes.Rectangle(
@@ -222,7 +212,7 @@ class RecordClient:
 
                         i = 1
                         for frame in all_frames:
-                            self.update_curses_screen("Calculating preview frame " + str(i) + " / " + str(len(all_frames)) + ".")
+                            self._update_curses_screen("Calculating preview frame " + str(i) + " / " + str(len(all_frames)) + ".")
                             i += 1
                             r , b , g  = self._paper_color
                             a = 255
@@ -234,7 +224,7 @@ class RecordClient:
                             draw.pil_draw_shapes(
                                     frame_pil_draw ,
                                     frame ,
-                                    self.get_rectangle(
+                                    self._get_rectangle(
                                         size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
                             if antialias != 1:
                                 frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
@@ -256,7 +246,7 @@ class RecordClient:
 
                         i = 1
                         for frame in all_frames:
-                            self.update_curses_screen("Calculating frame " + str(i) + " / " + str(len(all_frames)) + ".")
+                            self._update_curses_screen("Calculating frame " + str(i) + " / " + str(len(all_frames)) + ".")
                             logger.info("Calculating frame " + str(i) + " / " + str(len(all_frames)) + ".")
                             logger.debug("starting ...")
                             i += 1
@@ -273,7 +263,7 @@ class RecordClient:
                             draw.pil_draw_shapes(
                                     frame_pil_draw ,
                                     frame ,
-                                    self.get_rectangle(
+                                    self._get_rectangle(
                                         size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
                             if self._antialias != 1:
                                 logger.debug("frame_pil.resize(...)")
@@ -286,9 +276,9 @@ class RecordClient:
                     
                     last_frames = self._record.get_printout_frames()
                     if len(last_frames) > 0 and self._printout is not None:
-                        self.set_colors(self._light_pallete)
+                        self._set_colors(self._light_pallete)
                         for i in range(len(last_frames)):
-                            self.update_curses_screen("Calculating printout frame " + str(i + 1) + " / " + str(len(last_frames)) + ".")
+                            self._update_curses_screen("Calculating printout frame " + str(i + 1) + " / " + str(len(last_frames)) + ".")
                             logger.info("Calculating printout frame " + str(i + 1) + " / " + str(len(last_frames)) + ".")
                             logger.debug("starting ...")
                             frame = last_frames[i]
@@ -305,7 +295,7 @@ class RecordClient:
                             draw.pil_draw_shapes(
                                     frame_pil_draw ,
                                     frame ,
-                                    self.get_rectangle(
+                                    self._get_rectangle(
                                         size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
                             if self._antialias != 1:
                                 logger.debug("frame_pil.resize(...)")
@@ -313,7 +303,7 @@ class RecordClient:
                             logger.debug("frame_pil.save(...)")                                
                             frame_pil.save(os.path.join(self._printout , str(i) + ".png"))
                             logger.debug("...done")
-                        self.set_colors(self._dark_pallete)
+                        self._set_colors(self._dark_pallete)
                             
             else:
                 if symbol == pyglet.window.key.ENTER:
@@ -329,7 +319,7 @@ class RecordClient:
                     self._record.add_to_command(char)
                     self._state_cursor = -1
 
-            self.update_curses_screen()
+            self._update_curses_screen()
      
         # TABLET
 
@@ -340,16 +330,16 @@ class RecordClient:
         
             @self._tablet.event
             def on_motion(cursor, x, y, pressure, *rest):
-                x0 , y0 , x1 , y1 = self.get_rectangle()
+                x0 , y0 , x1 , y1 = self._get_rectangle()
                 xx = (x - x0) / (x1 - x0)
                 yy = (y - y0) / (x1 - x0)
                 self._record.add_to_stroke(xx , yy , pressure , time.time() , self._color)
 
-                self.update_curses_screen()
+                self._update_curses_screen()
         else:
             raise RuntimeError("No graphics tablet detected.")
 
-    def set_colors(self , pallete):
+    def _set_colors(self , pallete):
         self._paper_color = list(map(int , self._configuration[pallete]["paper_color"].split(",")))
 
         self._colors =  [
@@ -359,7 +349,7 @@ class RecordClient:
                                         ]
                         ]
 
-    def update_curses_screen(self , string = None):
+    def _update_curses_screen(self , string = None):
         height , width = self._curses_screen.getmaxyx()
         self._curses_screen.clear()
         if string is None:
@@ -372,7 +362,7 @@ class RecordClient:
             self._curses_screen.addstr(string)
         self._curses_screen.refresh()
 
-    def get_rectangle(self , size = None):
+    def _get_rectangle(self , size = None):
         window_width , window_height = self._window_width , self._window_height
         if size is not None:
             window_width , window_height = size
