@@ -10,6 +10,8 @@ import os
 import PIL
 import cv2
 import subprocess
+import sounddevice as sd
+import wave
 
 from log import logger
 import draw
@@ -68,6 +70,22 @@ class RecordClient:
 
         logger.debug("self._paper_color = " + str(self._paper_color))
         logger.debug("self._colors = " + str(self._colors))
+
+        # SOUND
+
+        # sauce : https://pythonfriday.dev/2025/07/289-record-audio-with-sounddevice/
+        self._samplerate = 44100
+        self._channels = 1
+        self._dtype = 'int16'
+        self._record_sound = False
+        self._recorded_sound_frames = []
+
+        def callback(indata , frames , time , status):
+            self._recorded_sound_frames.append(indata.copy())
+
+        self._callback = callback
+
+        self._is = None
 
         # CURRENT STROKE
 
@@ -304,7 +322,24 @@ class RecordClient:
                             frame_pil.save(os.path.join(self._printout , str(i) + ".png"))
                             logger.debug("...done")
                         self._set_colors(self._dark_pallete)
-                            
+                elif symbol == pyglet.window.key.G:
+                    if not self._record_sound:
+                        logger.debug("starting recording")
+                        self._is = sd.InputStream(samplerate = self._samplerate,
+                                                  channels = self._channels,
+                                                  dtype = self._dtype,
+                                                  callback = self._callback)
+                        self._is.start()
+                        self._record_sound = True
+                    else:
+                        logger.debug("ending recording")
+                        self._is.stop()
+                        self._is.close()
+                        self._record_sound = False
+                        self._recorded_sound_frames = numpy.concatenate(self._recorded_sound_frames)
+                        self._record.add_sound(self._recorded_sound_frames)
+                        logger.debug("done " + str(self._recorded_sound_frames.shape))
+                        self._recorded_sound_frames = []
             else:
                 if symbol == pyglet.window.key.ENTER:
                     char = '\n'

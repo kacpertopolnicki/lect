@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import numpy
 
 from log import logger
 
@@ -13,6 +14,8 @@ class Record:
         self._stroke = []
 
         self._strokes = {"current" : self._stroke}
+
+        self._recordings = dict()
 
         self._configuration = copy.deepcopy(configuration)
 
@@ -52,6 +55,7 @@ class Record:
 
     def __getstate__(self):
         return (self._strokes , 
+                self._recordings ,
                 self._configuration , 
                 self._states , 
                 self._dark_paper_color ,
@@ -63,7 +67,7 @@ class Record:
                 self._pause)
 
     def __setstate__(self , state):
-        self._strokes , self._configuration , self._states , \
+        self._strokes , self._recordings , self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause = state
         
@@ -221,16 +225,17 @@ class Record:
         frames_before = []
         for i in range(len(before)):
             s = before[i]
-            pts = self._strokes[s]
-            color = int(pts[0][4]) # todo, instead of parameters
-            thickness , red , green , blue , opacity = self._dark_colors[color]
-            shapes_list = draw.simple_stroke_shapes(pts , 
-                                                    parameters = {
-                                                           "thickness" : thickness , 
-                                                            "color" : (int(red) , int(green) , int(blue)) ,
-                                                            "opacity" : int(opacity)
-                                                            })
-            frames_before += shapes_list
+            if s in self._strokes:
+                pts = self._strokes[s]
+                color = int(pts[0][4]) # todo, instead of parameters
+                thickness , red , green , blue , opacity = self._dark_colors[color]
+                shapes_list = draw.simple_stroke_shapes(pts , 
+                                                        parameters = {
+                                                               "thickness" : thickness , 
+                                                                "color" : (int(red) , int(green) , int(blue)) ,
+                                                                "opacity" : int(opacity)
+                                                                })
+                frames_before += shapes_list
 
         frames = []
         for istroke in range(len(after)):
@@ -263,7 +268,7 @@ class Record:
                     frames.append(frames_before + start + shapes_list_part)
             elif after[istroke] == "pause":
                 for _ in range(self._pause):
-                    frames.append(start)
+                    frames.append(frames_before + start)
 
         if len(frames) > 0:
             return State(before , {'frames' : frames , 'printout' : frames[-1]})
@@ -372,6 +377,20 @@ class Record:
         self._strokes[name] = pts
 
         return name
+
+    def add_sound(self , sound):
+
+        snd = sound.copy()
+
+        name = "r_" + str(len(self._recordings))
+       
+        logger.debug("Adding sound " + name + " with length " + str(snd.shape) + ".")
+        
+        self._recordings[name] = snd
+                
+        state = self._states[-1]
+        new_state = state.add_to_program(name)
+        self._append(new_state)
 
     def add_to_stroke(self , x , y , p , t , c):
         if p == 0:

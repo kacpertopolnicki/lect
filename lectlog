@@ -1,0 +1,116 @@
+State(stack : )   [DEBUG|state.py|10]
+self._antialias : 2   [DEBUG|recordclient.py|60]
+self._paper_color = [39, 76, 67]   [DEBUG|recordclient.py|71]
+self._colors = [[0.001, 10.0, 10.0, 10.0, 255.0], [0.002, 200.0, 200.0, 200.0, 255.0], [0.002, 200.0, 10.0, 10.0, 255.0], [0.002, 10.0, 200.0, 10.0, 255.0], [0.002, 10.0, 10.0, 200.0, 255.0], [0.004, 200.0, 200.0, 200.0, 255.0], [0.004, 200.0, 10.0, 10.0, 255.0], [0.004, 10.0, 200.0, 10.0, 255.0], [0.004, 10.0, 10.0, 200.0, 255.0], [0.001, 50.0, 50.0, 50.0, 255.0]]   [DEBUG|recordclient.py|72]
+pos , height , start , end , len(self._states) : 0 11 -6 1 1   [DEBUG|record.py|552]
+starting recording   [DEBUG|recordclient.py|327]
+pos , height , start , end , len(self._states) : 0 11 -6 1 1   [DEBUG|record.py|552]
+pos , height , start , end , len(self._states) : 0 11 -6 1 1   [DEBUG|record.py|552]
+ending recording   [DEBUG|recordclient.py|335]
+Adding sound r_0 with length (280120, 1).   [DEBUG|record.py|387]
+State(stack : r_0 , with command : r_0)   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+)   [DEBUG|record.py|82]
+done (280120, 1)   [DEBUG|recordclient.py|341]
+pos , height , start , end , len(self._states) : 1 11 -5 2 2   [DEBUG|record.py|552]
+pos , height , start , end , len(self._states) : 1 11 -5 2 2   [DEBUG|record.py|552]
+starting recording   [DEBUG|recordclient.py|327]
+pos , height , start , end , len(self._states) : 1 11 -5 2 2   [DEBUG|record.py|552]
+pos , height , start , end , len(self._states) : 1 11 -5 2 2   [DEBUG|record.py|552]
+ending recording   [DEBUG|recordclient.py|335]
+Adding sound r_1 with length (88360, 1).   [DEBUG|record.py|387]
+State(stack : r_0 r_1 , with command : r_1)   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+ , State(stack : r_0 r_1 , with command : r_1)
+)   [DEBUG|record.py|82]
+done (88360, 1)   [DEBUG|recordclient.py|341]
+pos , height , start , end , len(self._states) : 2 11 -4 3 3   [DEBUG|record.py|552]
+pos , height , start , end , len(self._states) : 2 11 -4 3 3   [DEBUG|record.py|552]
+add_to_command("p")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 2 11 -4 3 3   [DEBUG|record.py|552]
+add_to_command("o")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 2 11 -4 3 3   [DEBUG|record.py|552]
+add_to_command("p")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 2 11 -4 3 3   [DEBUG|record.py|552]
+add_to_command("
+")   [DEBUG|record.py|414]
+State(stack : r_0 r_1 pop , with command : pop)   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+ , State(stack : r_0 r_1 , with command : r_1)
+ , State(stack : r_0 r_1 pop , with command : pop)
+)   [DEBUG|record.py|82]
+State(stack : r_0)   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+ , State(stack : r_0 r_1 , with command : r_1)
+ , State(stack : r_0 r_1 pop , with command : pop)
+ , State(stack : r_0)
+)   [DEBUG|record.py|82]
+pos , height , start , end , len(self._states) : 4 11 -2 5 5   [DEBUG|record.py|552]
+add_to_command("p")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 4 11 -2 5 5   [DEBUG|record.py|552]
+add_to_command("o")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 4 11 -2 5 5   [DEBUG|record.py|552]
+add_to_command("p")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 4 11 -2 5 5   [DEBUG|record.py|552]
+add_to_command("
+")   [DEBUG|record.py|414]
+State(stack : r_0 pop , with command : pop)   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+ , State(stack : r_0 r_1 , with command : r_1)
+ , State(stack : r_0 r_1 pop , with command : pop)
+ , State(stack : r_0)
+ , State(stack : r_0 pop , with command : pop)
+)   [DEBUG|record.py|82]
+State(stack : )   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+ , State(stack : r_0 r_1 , with command : r_1)
+ , State(stack : r_0 r_1 pop , with command : pop)
+ , State(stack : r_0)
+ , State(stack : r_0 pop , with command : pop)
+ , State(stack : )
+)   [DEBUG|record.py|82]
+pos , height , start , end , len(self._states) : 6 11 0 7 7   [DEBUG|record.py|552]
+add_to_command("p")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 6 11 0 7 7   [DEBUG|record.py|552]
+add_to_command("o")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 6 11 0 7 7   [DEBUG|record.py|552]
+add_to_command("p")   [DEBUG|record.py|414]
+pos , height , start , end , len(self._states) : 6 11 0 7 7   [DEBUG|record.py|552]
+add_to_command("
+")   [DEBUG|record.py|414]
+State(stack : pop , with command : pop)   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+ , State(stack : r_0 r_1 , with command : r_1)
+ , State(stack : r_0 r_1 pop , with command : pop)
+ , State(stack : r_0)
+ , State(stack : r_0 pop , with command : pop)
+ , State(stack : )
+ , State(stack : pop , with command : pop)
+)   [DEBUG|record.py|82]
+State(stack : )   [DEBUG|state.py|10]
+Record(
+State(stack : )
+ , State(stack : r_0 , with command : r_0)
+ , State(stack : r_0 r_1 , with command : r_1)
+ , State(stack : r_0 r_1 pop , with command : pop)
+ , State(stack : r_0)
+ , State(stack : r_0 pop , with command : pop)
+ , State(stack : )
+ , State(stack : pop , with command : pop)
+ , State(stack : )
+)   [DEBUG|record.py|82]
+pos , height , start , end , len(self._states) : 8 11 2 9 9   [DEBUG|record.py|552]
