@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("-l" , "--load" , help = "Path to file with saved lect data.")
     parser.add_argument("-s" , "--save" , help = "Path to file to save lect data.")
     parser.add_argument("-p" , "--printout" , help = "Path to directory for printout." , default = None)
+    parser.add_argument("-c" , "--config" , help = "Path to configuration file." , default = None)
     args = parser.parse_args()
 
     rec = None
@@ -28,6 +29,8 @@ if __name__ == "__main__":
 
         config = configparser.ConfigParser()
         config.read(os.path.join(LECT_DIRECTORY , "config"))
+        if args.config is not None:
+            config.read(args.config)
 
         rec = record.Record(config ,
                             dark_pallete = "default_pallete" ,
@@ -36,7 +39,7 @@ if __name__ == "__main__":
     record_client = recordclient.RecordClient(args.output , rec ,
                                               dark_pallete = "default_pallete" ,
                                               light_pallete = "light_pallete" ,
-                                              printout = args.printout)
+                                              printout = args.printout , pickle_path = args.save)
     record_client.run()
 
     if args.save is not None:

@@ -95,6 +95,7 @@ class Record:
                 "drawshort" : Record._drawshort ,
                 "show" : Record._show ,
                 "fade" : Record._fade ,
+                "printout" : Record._printout ,
                 "center" : Record._center ,
                 "clear" : Record._clear ,
                 "pop" : Record._pop
@@ -171,10 +172,41 @@ class Record:
         strokes = self.get_current_stack()
         strokes.pop()
 
+        posbreak = 0
+        found = False
+        for i in reversed(range(len(strokes))):
+            posbreak = i
+            if strokes[i] == "---":
+                found = True
+                break
+
+        before = strokes[:posbreak]
+        after = strokes[posbreak:]
+        if found:
+            after = strokes[posbreak + 1:]
+
+        logger.debug(before)
+        logger.debug(after)
+
+        frames_before = []
+        for i in range(len(before)):
+            s = before[i]
+            if s in self._strokes:
+                pts = self._strokes[s]
+                color = int(pts[0][4]) # todo, instead of parameters
+                thickness , red , green , blue , opacity = self._dark_colors[color]
+                shapes_list = draw.simple_stroke_shapes(pts , 
+                                                        parameters = {
+                                                               "thickness" : thickness , 
+                                                                "color" : (int(red) , int(green) , int(blue)) ,
+                                                                "opacity" : int(opacity)
+                                                                })
+                frames_before += shapes_list
+
         frames = []
-        for istroke in range(len(strokes)):
+        for istroke in range(len(after)):
             start = []
-            for s in strokes[:istroke]:
+            for s in after[:istroke]:
                 if s in self._strokes:
                     pts = self._strokes[s]
                     color = int(pts[0][4]) # todo, instead of parameters
@@ -187,8 +219,8 @@ class Record:
                                                                     })
                     start += shapes_list
 
-            if strokes[istroke] in self._strokes:
-                pts = self._strokes[strokes[istroke]]
+            if after[istroke] in self._strokes:
+                pts = self._strokes[after[istroke]]
                 color = int(pts[0][4]) # todo, instead of parameters
                 thickness , red , green , blue , opacity = self._dark_colors[color]
                 for i in list(range(0 , len(pts) , self._every)) + [len(pts)]:
@@ -199,25 +231,31 @@ class Record:
                                                                     "color" : (int(red) , int(green) , int(blue)) ,
                                                                     "opacity" : int(opacity)
                                                                     })
-                    frames.append(start + shapes_list_part)
-            elif strokes[istroke] == "pause":
+                    frames.append(frames_before + start + shapes_list_part)
+            elif after[istroke] == "pause":
                 for _ in range(self._pause):
-                    frames.append(start)
+                    frames.append(frames_before + start)        
 
-        return State(strokes , {'frames' : frames , 'printout' : frames[-1]})
+        return State(strokes , {'frames' : frames})
 
     def _drawshort(self , state):
         strokes = self.get_current_stack()
         strokes.pop()
 
+        br , bg , bb = self._dark_paper_color
+        
         posbreak = 0
+        found = False
         for i in reversed(range(len(strokes))):
             posbreak = i
             if strokes[i] == "---":
+                found = True
                 break
 
         before = strokes[:posbreak]
-        after = strokes[posbreak + 1:]
+        after = strokes[posbreak:]
+        if found:
+            after = strokes[posbreak + 1:]
 
         logger.debug("before : " + str(before))
         logger.debug("after : " + str(after))
@@ -270,10 +308,56 @@ class Record:
                 for _ in range(self._pause):
                     frames.append(frames_before + start)
 
-        if len(frames) > 0:
-            return State(before , {'frames' : frames , 'printout' : frames[-1]})
-        else:
-            return State(before , {'frames' : frames})
+        for i in reversed(range(2 * self._pause + 1)):
+            t = float(i) / (2 * self._pause)
+            f = []
+            for istroke in range(len(after)):
+                s = after[istroke]
+                if s in self._strokes:
+                    pts = self._strokes[s]
+                    color = int(pts[0][4]) # todo, instead of parameters
+                    thickness , red , green , blue , opacity = self._dark_colors[color]
+                    shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                            parameters = {
+                                                                   "thickness" : thickness , 
+                                                                    "color" : (
+                                                                        int(t * red + (1.0 - t) * br) , 
+                                                                        int(t * green + (1.0 - t) * bg) , 
+                                                                        int(t * blue + (1.0 - t) * bb)) ,
+                                                                    "opacity" : int(opacity)
+                                                                    })
+                    f += frames_before + shapes_list_part
+            frames.append(f)
+
+        return State(before , {'frames' : frames})
+
+    def _printout(self , state):
+        stack = self.get_current_stack()
+        stack.pop()
+
+        strokes = []
+        
+        for s in stack:
+            if s in self._strokes:
+                strokes.append(s)
+        
+        frame = []
+        for s in strokes:
+            pts = self._strokes[s]
+            color = int(pts[0][4]) # todo, instead of parameters
+            thickness , red , green , blue , opacity = self._light_colors[color]
+            shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                    parameters = {
+                                                           "thickness" : thickness , 
+                                                            "color" : (
+                                                                int(red) , 
+                                                                int(green) , 
+                                                                int(blue)) ,
+                                                            "opacity" : int(opacity)
+                                                            })
+            frame += shapes_list_part
+
+        return State(stack , {"printout" : frame})
 
     def _show(self , state):
         stack = self.get_current_stack()
@@ -307,8 +391,6 @@ class Record:
                 f += shapes_list_part
             frames.append(f)
 
-        printout = frames[-1]
-
         for i in reversed(range(2 * self._pause + 1)):
             t = float(i) / (2 * self._pause)
             f = []
@@ -328,7 +410,7 @@ class Record:
                 f += shapes_list_part
             frames.append(f)
 
-        return State([] , {'frames' : frames , 'printout' : printout})
+        return State([] , {'frames' : frames})
  
     def _fade(self , state):
         stack = self.get_current_stack()
@@ -499,6 +581,14 @@ class Record:
             return additional['frames']
         else:
             return None
+
+    def get_all_additional(self):
+        f = []
+        for s in self._states:
+            additional = s.get_additional()
+            if additional is not None:
+                f.append(additional)
+        return f
 
     def get_all_frames(self):
         f = []

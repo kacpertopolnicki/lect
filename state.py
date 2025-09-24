@@ -33,7 +33,7 @@ class State:
 
     def nicestr(self , width = 1000):
         a = "        "
-        if self._additional is not None:
+        if self._additional is not None and "frames" in self._additional:
             a = "(" + format(len(self._additional['frames']) , '5d') + ") "
         r = " ".join(self._stack)
         if len(r) > width - 28:

@@ -20,14 +20,19 @@ from record import State , Record
 RECORD_CLIENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 class RecordClient:
-    def __init__(self , output , record , dark_pallete = "default_pallete" , light_pallete = "default_pallete" , printout = None):
+    def __init__(self , output , record ,
+                 dark_pallete = "default_pallete" , 
+                 light_pallete = "default_pallete" , 
+                 printout = None , audio = None , pickle_path = None):
 
         # OUTPUT
 
         self._output_file = output
 
         self._printout = None
-        if printout is not None and not os.path.isdir(printout) and not os.path.isfile(printout):
+        if printout is not None and (os.path.isdir(printout) or os.path.isfile(printout)):
+            raise ValueError("Printout directory exists.")
+        if printout is not None:
             self._printout = printout
             os.mkdir(self._printout)
 
@@ -37,6 +42,10 @@ class RecordClient:
         self._state_cursor = -1
         self._commands_after = []
         self._commands_after_index = 0
+
+        # PICKLE
+
+        self._pickle_path = pickle_path
 
         # CONFIGURATION
         
@@ -84,8 +93,8 @@ class RecordClient:
             self._recorded_sound_frames.append(indata.copy())
 
         self._callback = callback
-
         self._is = None
+        self._audiopath = audio
 
         # CURRENT STROKE
 
@@ -219,41 +228,53 @@ class RecordClient:
 
                     antialias = 1
                     if all_frames is not None:
+                        try:
 
-                        fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-                        video = cv2.VideoWriter(
-                                self._output_file , 
-                                fourcc, 
-                                self._frame_rate , 
-                                (self._frame_preview_width , self._frame_preview_height)
-                                )
+                            fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+                            video = cv2.VideoWriter(
+                                    self._output_file , 
+                                    fourcc, 
+                                    self._frame_rate , 
+                                    (self._frame_preview_width , self._frame_preview_height)
+                                    )
 
-                        i = 1
-                        for frame in all_frames:
-                            self._update_curses_screen("Calculating preview frame " + str(i) + " / " + str(len(all_frames)) + ".")
-                            i += 1
-                            r , b , g  = self._paper_color
-                            a = 255
-                            frame_pil = PIL.Image.new(
-                                                    mode = "RGBA" , 
-                                                    size = (self._frame_preview_width * antialias , self._frame_preview_height * antialias) , 
-                                                    color = (r , b , g , a))
-                            frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
-                            draw.pil_draw_shapes(
-                                    frame_pil_draw ,
-                                    frame ,
-                                    self._get_rectangle(
-                                        size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
-                            if antialias != 1:
-                                frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
-                            video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
-
-                        video.release()
-                        subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                            i = 1
+                            for frame in all_frames:
+                                self._update_curses_screen("Calculating preview frame " + str(i) + " / " + str(len(all_frames)) + ".")
+                                i += 1
+                                r , b , g  = self._paper_color
+                                a = 255
+                                frame_pil = PIL.Image.new(
+                                                        mode = "RGBA" , 
+                                                        size = (self._frame_preview_width * antialias , self._frame_preview_height * antialias) , 
+                                                        color = (r , b , g , a))
+                                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                draw.pil_draw_shapes(
+                                        frame_pil_draw ,
+                                        frame ,
+                                        self._get_rectangle(
+                                            size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
+                                if antialias != 1:
+                                    frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
+                                video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
+                        except Exceptions as e:
+                            video.release()
+                            subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                            raise e
+                        finally:
+                            video.release()
+                            subprocess.run(self._preview_command.strip().split() + [self._output_file])
                 elif symbol == pyglet.window.key.S:
-                    all_frames = self._record.get_all_frames()
-                    if len(all_frames) > 0:
+                    all_additional = self._record.get_all_additional()
 
+                    len_all_frames = 0
+                    len_all_printout = 0
+                    for a in all_additional:
+                        if 'frames' in a:
+                            len_all_frames += len(a["frames"])
+                        if 'printout' in a:
+                            len_all_printout += 1
+                    try:
                         fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
                         video = cv2.VideoWriter(
                                 self._output_file , 
@@ -262,66 +283,66 @@ class RecordClient:
                                 (self._frame_width , self._frame_height)
                                 )
 
-                        i = 1
-                        for frame in all_frames:
-                            self._update_curses_screen("Calculating frame " + str(i) + " / " + str(len(all_frames)) + ".")
-                            logger.info("Calculating frame " + str(i) + " / " + str(len(all_frames)) + ".")
-                            logger.debug("starting ...")
-                            i += 1
-                            r , b , g  = self._paper_color
-                            a = 255
-                            logger.debug("PIL.Image.new(...)")
-                            frame_pil = PIL.Image.new(
-                                                    mode = "RGBA" , 
-                                                    size = (self._frame_width * self._antialias , self._frame_height * self._antialias) , 
-                                                    color = (r , b , g , a))
-                            logger.debug("PIL.ImageDraw.Draw(...)")
-                            frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
-                            logger.debug("draw.pil_draw_shapes(...)")
-                            draw.pil_draw_shapes(
-                                    frame_pil_draw ,
-                                    frame ,
-                                    self._get_rectangle(
-                                        size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
-                            if self._antialias != 1:
-                                logger.debug("frame_pil.resize(...)")
-                                frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
-                            logger.debug("video.write(...)")
-                            video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
-                            logger.debug("... done")
+                        i_frame = 1
+                        i_printout = 1
+                        for aa in all_additional:
+                            if "frames" in aa:
+                                self._set_colors(self._dark_pallete)
+                                frames = aa["frames"]
+                                for frame in frames:
+                                    self._update_curses_screen("Calculating frame " + str(i_frame) + " / " + str(len_all_frames) + ".")
+                                    logger.info("Calculating frame " + str(i_frame) + " / " + str(len_all_frames) + ".")
+                                    r , b , g  = self._paper_color
+                                    a = 255
+                                    frame_pil = PIL.Image.new(
+                                                            mode = "RGBA" , 
+                                                            size = (self._frame_width * self._antialias , self._frame_height * self._antialias) , 
+                                                            color = (r , b , g , a))
+                                    frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                    draw.pil_draw_shapes(
+                                            frame_pil_draw ,
+                                            frame ,
+                                            self._get_rectangle(
+                                                size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
+                                    if self._antialias != 1:
+                                        frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
+                                    video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
+                                    i_frame += 1
+                            if "printout" in aa:
+                                self._set_colors(self._light_pallete)
+                                self._update_curses_screen("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
+                                logger.info("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
+                                frame = aa["printout"]
+                                r , b , g  = self._paper_color
+                                a = 255
+                                frame_pil = PIL.Image.new(
+                                                        mode = "RGBA" , 
+                                                        size = (self._frame_width * self._antialias , self._frame_height * self._antialias) , 
+                                                        color = (r , b , g , a))
+                                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                draw.pil_draw_shapes(
+                                        frame_pil_draw ,
+                                        frame ,
+                                        self._get_rectangle(
+                                            size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
+                                if self._antialias != 1:
+                                    logger.debug("frame_pil.resize(...)")
+                                    frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
+                                logger.debug(self._printout)
+                                logger.debug(str(i_printout))
+                                path = os.path.join(self._printout , str(i_printout) + ".png")
+                                logger.debug("path : " + str(path))
+                                logger.debug("frame_pil : " + str(frame_pil))
+                                frame_pil.save(path)
+                                i_printout += 1
+                    except Exceptions as e:
+                        video.release()
+                        subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                        raise e
+                    finally:
                         video.release()
                         subprocess.run(self._preview_command.strip().split() + [self._output_file])
                     
-                    last_frames = self._record.get_printout_frames()
-                    if len(last_frames) > 0 and self._printout is not None:
-                        self._set_colors(self._light_pallete)
-                        for i in range(len(last_frames)):
-                            self._update_curses_screen("Calculating printout frame " + str(i + 1) + " / " + str(len(last_frames)) + ".")
-                            logger.info("Calculating printout frame " + str(i + 1) + " / " + str(len(last_frames)) + ".")
-                            logger.debug("starting ...")
-                            frame = last_frames[i]
-                            r , b , g  = self._paper_color
-                            a = 255
-                            logger.debug("PIL.Image.new(...)")
-                            frame_pil = PIL.Image.new(
-                                                    mode = "RGBA" , 
-                                                    size = (self._frame_width * self._antialias , self._frame_height * self._antialias) , 
-                                                    color = (r , b , g , a))
-                            logger.debug("PIL.ImageDraw.Draw(...)")
-                            frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
-                            logger.debug("draw.pil_draw_shapes(...)")
-                            draw.pil_draw_shapes(
-                                    frame_pil_draw ,
-                                    frame ,
-                                    self._get_rectangle(
-                                        size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
-                            if self._antialias != 1:
-                                logger.debug("frame_pil.resize(...)")
-                                frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
-                            logger.debug("frame_pil.save(...)")                                
-                            frame_pil.save(os.path.join(self._printout , str(i) + ".png"))
-                            logger.debug("...done")
-                        self._set_colors(self._dark_pallete)
                 elif symbol == pyglet.window.key.G:
                     if not self._record_sound:
                         logger.debug("starting recording")
@@ -340,6 +361,11 @@ class RecordClient:
                         self._record.add_sound(self._recorded_sound_frames)
                         logger.debug("done " + str(self._recorded_sound_frames.shape))
                         self._recorded_sound_frames = []
+                elif symbol == pyglet.window.key.W:
+                    logger.debug("saving" + str(self._pickle_path))
+                    if self._pickle_path is not None:
+                        with open(self._pickle_path , "wb") as f:
+                            pickle.dump(self._record , f)
             else:
                 if symbol == pyglet.window.key.ENTER:
                     char = '\n'
