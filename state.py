@@ -36,8 +36,8 @@ class State:
         if self._additional is not None and "frames" in self._additional:
             a = "(" + format(len(self._additional['frames']) , '5d') + ") "
         r = " ".join(self._stack)
-        if len(r) > width - 28:
-            return a + "... " + r[-(width - 28):]
+        if len(r) > width - 4 - 8:
+            return a + "... " + r[-(width - 4 - 8):]
         else:
             return a + r
     

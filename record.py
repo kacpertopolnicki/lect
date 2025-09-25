@@ -17,6 +17,8 @@ class Record:
 
         self._recordings = dict()
 
+        self._savedstacks = dict()
+
         self._configuration = copy.deepcopy(configuration)
 
         self._states = [State([] , None)]
@@ -56,6 +58,7 @@ class Record:
     def __getstate__(self):
         return (self._strokes , 
                 self._recordings ,
+                self._savedstacks ,
                 self._configuration , 
                 self._states , 
                 self._dark_paper_color ,
@@ -67,7 +70,7 @@ class Record:
                 self._pause)
 
     def __setstate__(self , state):
-        self._strokes , self._recordings , self._configuration , self._states , \
+        self._strokes , self._recordings , self._savedstacks , self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause = state
         
@@ -94,12 +97,51 @@ class Record:
                 "draw" : Record._draw ,
                 "drawshort" : Record._drawshort ,
                 "show" : Record._show ,
-                "fade" : Record._fade ,
+                "fadein" : Record._fadein ,
+                "fadeout" : Record._fadeout ,
                 "printout" : Record._printout ,
                 "center" : Record._center ,
+                "position" : Record._position ,
                 "clear" : Record._clear ,
+                "savestack" : Record._savestack ,
+                "appendstack" : Record._appendstack ,
                 "pop" : Record._pop
             }
+
+    def _savestack(self , state):
+        stack = state.get_stack()
+        stack.pop()
+        if len(stack) >= 1:
+            name = stack[-1]
+            tosave = stack[:-1]
+            # todo
+            # - this might conflict with _stroke names
+            #   make sure new stroke names are unique
+            # - same is true for recording names
+            if name not in self._savedstacks:
+                self._savedstacks[name] = tosave
+                return State(tosave , [])
+            else:
+                return State(stack , [])
+        else:
+            return State(stack , [])
+
+    def _appendstack(self , state):
+        # todo
+        # - this can be used to execute functions
+        #   use _append to append states
+        #   add quote
+        stack = state.get_stack()
+        stack.pop()
+        if len(stack) >= 1:
+            name = stack[-1]
+            previous = stack[:-1]
+            if name in self._savedstacks:
+                return State(previous + self._savedstacks[name] , [])
+            else:
+                return State(stack , [])
+        else:
+            return State(stack , [])
 
     def _id(self , state):
         stack = state.get_stack()[:-1]
@@ -118,6 +160,75 @@ class Record:
 
     def _clear(self , state):
         return State([] , None)
+
+    def _position(self , state):
+        strokes = self.get_current_stack()
+        command = strokes.pop()
+
+        if len(strokes) < 1:
+            return State(strokes , [])
+
+        xycoord = strokes.pop()
+
+        try:
+            xcoord , ycoord = xycoord.split(',')
+            xa , xb = ycoord.split('/')
+            ya , yb = xcoord.split('/')
+            xcoord = (float(xa) / float(xb))
+            ycoord = (float(ya) / float(yb)) / self._ar
+        except Exception as s:
+            return State(strokes , [])
+
+        break_position = -1
+        for i in range(len(strokes)):
+            s = strokes[i]
+            if s == "---":
+                break_position = i
+
+        minx , miny , maxx , maxy = None , None , None , None
+        for i in range(len(strokes)):
+            s = strokes[i]
+            if s in self._strokes and i > break_position:
+                pts = self._strokes[s]
+                for x , y , _ , _ , _ in pts:
+                    if minx is None or x < minx:
+                        minx = x
+                    if miny is None or y < miny:
+                        miny = y
+                    if maxx is None or x > maxx:
+                        maxx = x
+                    if maxy is None or y > maxy:
+                        maxy = y
+       
+        if minx is not None and miny is not None and maxx is not None and maxy is not None:
+
+            centerx = 0.5 * (maxx + minx)
+            centery = 0.5 * (maxy + miny)
+
+            addx = xcoord - centerx
+            addy = ycoord - centery
+
+            logger.debug("centerx centery addx addy : " + str(centerx) + " " + str(centery) + " " + str(addx) + " " + str(addy))
+
+            new_stack = []
+            for i in range(len(strokes)):
+                s = strokes[i]
+                if i > break_position:
+                    if s in self._strokes:
+                        pts = self._strokes[s]
+                        newpts = [
+                                    [addx + x , addy + y , p , t , style] 
+                                    for x , y , p , t , style in pts]
+
+                        new_stack.append(self.add_full_stroke(newpts))
+                    else:
+                        new_stack.append(s)
+                else:
+                    new_stack.append(s)
+
+            return State(new_stack , None)
+        else:
+            return State(strokes , None)
 
     def _center(self , state):
         strokes = self.get_current_stack()
@@ -412,7 +523,7 @@ class Record:
 
         return State([] , {'frames' : frames})
  
-    def _fade(self , state):
+    def _fadeout(self , state):
         stack = self.get_current_stack()
 
         strokes = []
@@ -445,6 +556,41 @@ class Record:
             frames.append(f)
 
         return State([] , {'frames' : frames})       
+
+    def _fadein(self , state):
+        stack = self.get_current_stack()
+        stack.pop()
+
+        strokes = []
+
+        for s in stack:
+            if s in self._strokes:
+                strokes.append(s)
+
+        br , bg , bb = self._dark_paper_color
+
+        frames = []
+
+        for i in range(2 * self._pause + 1):
+            t = float(i) / (2 * self._pause)
+            f = []
+            for s in strokes:
+                pts = self._strokes[s]
+                color = int(pts[0][4]) # todo, instead of parameters
+                thickness , red , green , blue , opacity = self._dark_colors[color]
+                shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                        parameters = {
+                                                               "thickness" : thickness , 
+                                                                "color" : (
+                                                                    int(t * red + (1.0 - t) * br) , 
+                                                                    int(t * green + (1.0 - t) * bg) , 
+                                                                    int(t * blue + (1.0 - t) * bb)) ,
+                                                                "opacity" : int(opacity)
+                                                                })
+                f += shapes_list_part
+            frames.append(f)
+
+        return State(stack , {'frames' : frames})    
 
     # for interacting
 
@@ -495,12 +641,13 @@ class Record:
     def add_to_command(self , char):
         logger.debug("add_to_command(\"" + char + "\")")
         if char == '\n':
-            state = self._states[-1]
-            new_state = state.add_to_program(self._command)
-            self._append(new_state)
+            if len(self._command.strip()) > 0:
+                state = self._states[-1]
+                new_state = state.add_to_program(self._command.strip())
+                self._append(new_state)
 
-            self._command = ""
-            state = self._states[-1]
+                self._command = ""
+                state = self._states[-1]
         elif char == chr(8):
             self._command = self._command[:-1]
         else:
@@ -615,19 +762,22 @@ class Record:
         return string
     
     def nicestr(self , cursor = None , width = 1000 , height = 1000):
-        statelist = ["  " + format(i , '5d') + " : " + self._states[i].nicestr(width = width) 
+        #statelist = ["  " + format(i , '5d') + " : " + self._states[i].nicestr(width = width) 
+        #         for i in range(len(self._states))]
+        statelist = ["  " + self._states[i].nicestr(width = width - 2) 
                  for i in range(len(self._states))]
         if cursor is not None:
             pos = cursor % len(self._states)
-            statelist[pos] = "| " + format(pos , '5d') + " : " + self._states[pos].nicestr(width = width) 
+            #statelist[pos] = "| " + format(pos , '5d') + " : " + self._states[pos].nicestr(width = width) 
+            statelist[pos] = "| " + self._states[pos].nicestr(width = width - 2) 
 
-        start = len(statelist) - (height - 3) - 1
+        start = len(statelist) - (height - 2) - 1
         end = len(statelist) - 1
 
         if cursor is not None:
             before = 2
             pos = cursor % len(self._states)
-            after = (height - 4) - before
+            after = (height - 3) - before
             start = pos - before
             end = pos + after
             if start < 0:
@@ -639,11 +789,12 @@ class Record:
                 start -= sub
                 end -= sub
 
-        logger.debug("pos , height , start , end , len(self._states) : " + str(pos) + " " + str(height) + " " + str(start) + " " + str(end) + " " + str(len(self._states)))
+        #logger.debug("pos , height , start , end , len(self._states) : " + str(pos) + " " + str(height) + " " + str(start) + " " + str(end) + " " + str(len(self._states)))
 
         if len(statelist) > height - 3:
             #string = "    ... : ...\n" + "\n".join(statelist[-(height - 3):])
-            string = "    ... : ...\n" + "\n".join(statelist[start : end])
+            #string = "    ... : ...\n" + "\n".join(statelist[start : end])
+            string = "\n".join(statelist[start : end])
             return string
         else:
             string = "\n".join(statelist)

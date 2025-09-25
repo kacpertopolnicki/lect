@@ -115,6 +115,7 @@ class RecordClient:
         # CURSES
 
         self._curses_screen = curses.initscr()
+        curses.curs_set(0) 
         self._update_curses_screen()
 
         # WINDOW
@@ -240,6 +241,7 @@ class RecordClient:
 
                             i = 1
                             for frame in all_frames:
+                                self._set_colors(self._dark_pallete)
                                 self._update_curses_screen("Calculating preview frame " + str(i) + " / " + str(len(all_frames)) + ".")
                                 i += 1
                                 r , b , g  = self._paper_color
@@ -346,6 +348,7 @@ class RecordClient:
                 elif symbol == pyglet.window.key.G:
                     if not self._record_sound:
                         logger.debug("starting recording")
+                        self._update_curses_screen("starting recording")
                         self._is = sd.InputStream(samplerate = self._samplerate,
                                                   channels = self._channels,
                                                   dtype = self._dtype,
@@ -354,6 +357,7 @@ class RecordClient:
                         self._record_sound = True
                     else:
                         logger.debug("ending recording")
+                        self._update_curses_screen("ending recording")
                         self._is.stop()
                         self._is.close()
                         self._record_sound = False
@@ -414,7 +418,9 @@ class RecordClient:
         height , width = self._curses_screen.getmaxyx()
         self._curses_screen.clear()
         if string is None:
-            self._curses_screen.addstr(("command : " + self._record.get_current_command())[:width - 1] + "\n\n" + self._record.nicestr(cursor = self._state_cursor , width = width , height = height))
+            self._curses_screen.addstr(("          " + 
+                        self._record.get_current_command())[:width - 10] + "\n\n" + 
+                        self._record.nicestr(cursor = self._state_cursor , width = width - 2 , height = height))
         else:
             string = string.strip()
             string = string.replace("\n" , " , ")
