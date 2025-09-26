@@ -6,4 +6,4 @@ logging.basicConfig(filename = os.path.join(LOG_DIRECTORY , "lectlog") ,
                     filemode = "w" , 
                     format='%(message)s   [%(levelname)s|%(filename)s|%(lineno)d]')
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)

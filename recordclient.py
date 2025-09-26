@@ -17,7 +17,18 @@ from log import logger
 import draw
 from record import State , Record
 
+import time
+
 RECORD_CLIENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+
+#TIME_IN_ON_RESIZE = 0
+#TIME_IN_ON_DRAW = 0
+#TIME_IN_ON_KEY_RELEASE = 0
+#TIME_IN_ON_MOTION = 0
+#N_IN_ON_RESIZE = 0
+#N_IN_ON_DRAW = 0
+#N_IN_ON_KEY_RELEASE = 0
+#N_IN_ON_MOTION = 0
 
 class RecordClient:
     def __init__(self , output , record ,
@@ -132,12 +143,17 @@ class RecordClient:
 
         @self._window.event
         def on_resize(width , height):
+            #global TIME_IN_ON_RESIZE , N_IN_ON_RESIZE
+            #tme = time.time()
             self._window_width , self._window_height = self._window.get_size()
             self._stroke_recalculate = True
-            
+            #TIME_IN_ON_RESIZE += time.time() - tme
+            #N_IN_ON_RESIZE += 1
 
         @self._window.event
         def on_draw():
+            #global TIME_IN_ON_DRAW , N_IN_ON_DRAW
+            #tme = time.time()
             self._window.clear()
             x0 , y0 , x1 , y1 = self._get_rectangle()
 
@@ -184,9 +200,16 @@ class RecordClient:
                     logger.debug(" self._stroke.batches[s] = " + str(self._stroke_batches[s]))
                 self._stroke_batches[s].draw()
             self._stroke_recalculate = False
+            #TIME_IN_ON_DRAW += time.time() - tme
+            #N_IN_ON_DRAW += 1
 
         @self._window.event
         def on_key_release(symbol , modifiers):
+            #global TIME_IN_ON_RESIZE , N_IN_ON_RESIZE
+            #global TIME_IN_ON_DRAW , N_IN_ON_DRAW
+            #global TIME_IN_ON_KEY_RELEASE , N_IN_ON_KEY_RELEASE
+            #global TIME_IN_ON_MOTION , N_IN_ON_MOTION
+            #tme = time.time()
             if modifiers == pyglet.window.key.MOD_CTRL:
                 if 48 <= symbol <= 57:
                     logger.debug("color number = " + str(int(symbol) - 48) + ".")
@@ -205,18 +228,14 @@ class RecordClient:
                         self._commands_after = commands 
                         self._commands_after_index = 0
                     self._state_cursor = -1
+                    self._record.reexecute(cursor = self._state_cursor)
                 elif symbol == pyglet.window.key.X:
                     commands = self._record.modify_after_cursor(self._state_cursor , save_commands = False)
                     if commands is not None:
                         self._commands_after = commands 
                         self._commands_after_index = 0
                     self._state_cursor = -1
-                elif symbol == pyglet.window.key.N:
-                    if len(self._commands_after) > 0:
-                        pos = self._commands_after_index % len(self._commands_after)
-                        command = self._commands_after[pos]
-                        self._record.change_command(command)
-                    self._commands_after_index += 1
+                    self._record.reexecute(cursor = self._state_cursor)
                 elif symbol == pyglet.window.key.R:
                     if len(self._commands_after) > 0:
                         for i in range(len(self._commands_after)):
@@ -225,6 +244,7 @@ class RecordClient:
                     self._commands_after = []
                     self._commands_after_index = 0
                 elif symbol == pyglet.window.key.P:
+                    logger.debug("calculating preview")
                     all_frames = self._record.get_frames(cursor = self._state_cursor)
 
                     antialias = 1
@@ -385,6 +405,25 @@ class RecordClient:
                     self._state_cursor = -1
 
             self._update_curses_screen()
+            #TIME_IN_ON_KEY_RELEASE += time.time() - tme
+            #N_IN_ON_KEY_RELEASE += 1
+
+            #tot  = TIME_IN_ON_RESIZE + TIME_IN_ON_DRAW + TIME_IN_ON_KEY_RELEASE + TIME_IN_ON_MOTION
+            #msg = []
+            #msg.append(str(TIME_IN_ON_RESIZE / N_IN_ON_RESIZE if N_IN_ON_RESIZE > 0 else 0) + " " + str(TIME_IN_ON_RESIZE / tot))
+            #msg.append(str(TIME_IN_ON_DRAW / N_IN_ON_DRAW if N_IN_ON_DRAW > 0 else 0) + " " + str(TIME_IN_ON_DRAW / tot))
+            #msg.append(str(TIME_IN_ON_KEY_RELEASE / N_IN_ON_KEY_RELEASE if N_IN_ON_KEY_RELEASE > 0 else 0) + " " + str(TIME_IN_ON_KEY_RELEASE / tot))
+            #msg.append(str(TIME_IN_ON_MOTION / N_IN_ON_MOTION if N_IN_ON_MOTION > 0 else 0) + " " + str(TIME_IN_ON_MOTION / tot))
+            #logger.info("\n".join(msg))
+            #if min(N_IN_ON_RESIZE , N_IN_ON_DRAW , N_IN_ON_KEY_RELEASE , N_IN_ON_MOTION) > 100:
+                #TIME_IN_ON_RESIZE = 0
+                #TIME_IN_ON_DRAW = 0
+                #TIME_IN_ON_KEY_RELEASE = 0
+                #TIME_IN_ON_MOTION = 0
+                #N_IN_ON_RESIZE = 0
+                #N_IN_ON_DRAW = 0
+                #N_IN_ON_KEY_RELEASE = 0
+                #N_IN_ON_MOTION = 0
      
         # TABLET
 
@@ -395,12 +434,19 @@ class RecordClient:
         
             @self._tablet.event
             def on_motion(cursor, x, y, pressure, *rest):
+                #global TIME_IN_ON_MOTION , N_IN_ON_MOTION
+                #tme = time.time()
                 x0 , y0 , x1 , y1 = self._get_rectangle()
                 xx = (x - x0) / (x1 - x0)
                 yy = (y - y0) / (x1 - x0)
+
+                l = len(self._record)
                 self._record.add_to_stroke(xx , yy , pressure , time.time() , self._color)
 
-                self._update_curses_screen()
+                if len(self._record) != l:
+                    self._update_curses_screen()
+                #TIME_IN_ON_MOTION += time.time() - tme
+                #N_IN_ON_MOTION += 1
         else:
             raise RuntimeError("No graphics tablet detected.")
 
@@ -420,7 +466,9 @@ class RecordClient:
         if string is None:
             self._curses_screen.addstr(("          " + 
                         self._record.get_current_command())[:width - 10] + "\n\n" + 
-                        self._record.nicestr(cursor = self._state_cursor , width = width - 2 , height = height))
+                        self._record.nicestr(cursor = self._state_cursor , 
+                                             width = width - 2 , height = height , 
+                                             additional = list(map(lambda x : "          [" + x + "]" , self._commands_after))))
         else:
             string = string.strip()
             string = string.replace("\n" , " , ")

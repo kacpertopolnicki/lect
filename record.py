@@ -11,6 +11,8 @@ from state import State
 class Record:
     def __init__(self , configuration , dark_pallete = "default_pallete" , light_pallete = "default_pallete"):
 
+        self._unique = 0
+
         self._stroke = []
 
         self._strokes = {"current" : self._stroke}
@@ -56,7 +58,8 @@ class Record:
     # PICKLE
 
     def __getstate__(self):
-        return (self._strokes , 
+        return (self._unique ,
+                self._strokes , 
                 self._recordings ,
                 self._savedstacks ,
                 self._configuration , 
@@ -70,7 +73,7 @@ class Record:
                 self._pause)
 
     def __setstate__(self , state):
-        self._strokes , self._recordings , self._savedstacks , self._configuration , self._states , \
+        self._unique , self._strokes , self._recordings , self._savedstacks , self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause = state
         
@@ -172,8 +175,8 @@ class Record:
 
         try:
             xcoord , ycoord = xycoord.split(',')
-            xa , xb = ycoord.split('/')
-            ya , yb = xcoord.split('/')
+            xa , xb = xcoord.split('/')
+            ya , yb = ycoord.split('/')
             xcoord = (float(xa) / float(xb))
             ycoord = (float(ya) / float(yb)) / self._ar
         except Exception as s:
@@ -598,7 +601,8 @@ class Record:
 
         pts = copy.deepcopy(points)
 
-        name = "s_" + str(len(self._strokes))
+        name = "s_" + str(self._unique)
+        self._unique += 1
        
         logger.debug("Adding full stroke " + name + " with length " + str(len(pts)) + ".")
         
@@ -610,7 +614,8 @@ class Record:
 
         snd = sound.copy()
 
-        name = "r_" + str(len(self._recordings))
+        name = "r_" + str(self._unique)
+        self._unique += 1
        
         logger.debug("Adding sound " + name + " with length " + str(snd.shape) + ".")
         
@@ -623,7 +628,8 @@ class Record:
     def add_to_stroke(self , x , y , p , t , c):
         if p == 0:
             if len(self._stroke) > 1:
-                name = "s_" + str(len(self._strokes))
+                name = "s_" + str(self._unique)
+                self._unique += 1
                
                 logger.debug("Adding stroke " + name + " with length " + str(len(self._stroke)) + ".")
                 
@@ -698,6 +704,13 @@ class Record:
         else:
             return None
 
+    def reexecute(self , cursor = None):
+        pos = len(self._states) - 1
+        if cursor is not None:
+            pos = cursor % len(self._states)
+        state = self._states.pop()
+        self._append(state)
+
     def get_current_strokes(self , cursor = None):
         stack = None
         if cursor is None:
@@ -753,7 +766,10 @@ class Record:
                 f.append(additional['printout'])
         return f
 
-    # 
+    #
+
+    def __len__(self):
+        return len(self._states)
 
     def __str__(self):
         statelist = "\n , ".join([str(self._states[i]) 
@@ -761,7 +777,7 @@ class Record:
         string = "Record(\n" + statelist + "\n)"
         return string
     
-    def nicestr(self , cursor = None , width = 1000 , height = 1000):
+    def nicestr(self , cursor = None , width = 1000 , height = 1000 , additional = []):
         #statelist = ["  " + format(i , '5d') + " : " + self._states[i].nicestr(width = width) 
         #         for i in range(len(self._states))]
         statelist = ["  " + self._states[i].nicestr(width = width - 2) 
@@ -770,6 +786,8 @@ class Record:
             pos = cursor % len(self._states)
             #statelist[pos] = "| " + format(pos , '5d') + " : " + self._states[pos].nicestr(width = width) 
             statelist[pos] = "| " + self._states[pos].nicestr(width = width - 2) 
+
+        statelist += additional
 
         start = len(statelist) - (height - 2) - 1
         end = len(statelist) - 1
