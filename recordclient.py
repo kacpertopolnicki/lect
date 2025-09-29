@@ -313,6 +313,103 @@ class RecordClient:
                             #sd.play(frames , samplerate = self._samplerate , device = self._output_device)
 
                     self._status = None
+                elif symbol == pyglet.window.key.A:
+                    all_additional = self._record.get_all_additional()
+
+                    antialias = 1
+                    
+                    len_all_frames = 0
+                    len_all_printout = 0
+                    for a in all_additional:
+                        if 'frames' in a:
+                            len_all_frames += len(a["frames"])
+                        if 'printout' in a:
+                            len_all_printout += 1
+                    try:
+                        fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+                        video = cv2.VideoWriter(
+                                self._output_file , 
+                                fourcc, 
+                                self._frame_rate , 
+                                (self._frame_preview_width , self._frame_preview_height)
+                                )
+
+                        all_recordings = []
+                        i_frame = 1
+                        i_printout = 1
+                        for aa in all_additional:
+                            if "frames" in aa:
+                                self._set_colors(self._dark_pallete)
+                                frames = aa["frames"]
+                                for frame in frames:
+                                    self._status = "Calculating frame " + str(i_frame) + " / " + str(len_all_frames) + "."
+                                    self._update_curses_screen()
+                                    logger.info("Calculating frame " + str(i_frame) + " / " + str(len_all_frames) + ".")
+                                    r , b , g  = self._paper_color
+                                    a = 255
+                                    frame_pil = PIL.Image.new(
+                                                            mode = "RGBA" , 
+                                                            size = (self._frame_preview_width * antialias , self._frame_preview_height * antialias) , 
+                                                            color = (r , b , g , a))
+                                    frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                    draw.pil_draw_shapes(
+                                            frame_pil_draw ,
+                                            frame ,
+                                            self._get_rectangle(
+                                                size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
+                                    if self._antialias != 1:
+                                        frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
+                                    video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
+                                    i_frame += 1
+                            if "printout" in aa:
+                                self._set_colors(self._light_pallete)
+                                self._status = "Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + "."
+                                self._update_curses_screen()
+                                logger.info("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
+                                frame = aa["printout"]
+                                r , b , g  = self._paper_color
+                                a = 255
+                                frame_pil = PIL.Image.new(
+                                                        mode = "RGBA" , 
+                                                        size = (self._frame_preview_width * antialias , self._frame_preview_height * antialias) , 
+                                                        color = (r , b , g , a))
+                                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                draw.pil_draw_shapes(
+                                        frame_pil_draw ,
+                                        frame ,
+                                        self._get_rectangle(
+                                            size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
+                                if self._antialias != 1:
+                                    logger.debug("frame_pil.resize(...)")
+                                    frame_pil = frame_pil.resize((self._frame_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
+                                logger.debug(self._printout)
+                                logger.debug(str(i_printout))
+                                path = os.path.join(self._printout , str(i_printout) + ".png")
+                                logger.debug("path : " + str(path))
+                                logger.debug("frame_pil : " + str(frame_pil))
+                                frame_pil.save(path)
+                                i_printout += 1
+                            if "recording" in aa:
+                                all_recordings.append(aa["recording"])
+
+                        all_recordings = numpy.concatenate(all_recordings)
+                        with wave.open(self._audiopath, 'wb') as wf:
+                            wf.setnchannels(self._channels)
+                            wf.setsampwidth(numpy.dtype(self._dtype).itemsize)
+                            wf.setframerate(self._samplerate)
+                            wf.writeframes(all_recordings.tobytes())
+
+                    except Exception as e:
+                        video.release()
+                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                        #subprocess.run(self._sound_preview_command.strip().split() + [self._audiopath])
+                        raise e
+                    finally:
+                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                        #subprocess.run(self._sound_preview_command.strip().split() + [self._audiopath])
+                        video.release()
+                    self._status = None
+
                 elif symbol == pyglet.window.key.S:
                     all_additional = self._record.get_all_additional()
 
@@ -399,11 +496,11 @@ class RecordClient:
 
                     except Exception as e:
                         video.release()
-                        subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
                         raise e
                     finally:
                         video.release()
-                        subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
                     self._status = None
                     
                 elif symbol == pyglet.window.key.G:

@@ -76,12 +76,16 @@ class Record:
                 self._light_colors , 
                 self._ar , 
                 self._every , 
-                self._pause)
+                self._pause ,
+                self._samplerate , 
+                self._channels ,
+                self._framerate)
 
     def __setstate__(self , state):
         self._unique , self._strokes , self._recordings , self._savedstacks , self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
-        self._light_colors , self._ar , self._every , self._pause = state
+        self._light_colors , self._ar , self._every , self._pause , \
+        self._samplerate , self._channels , self._framerate = state
         
         self._stroke = []
         self._command = ""
@@ -561,8 +565,6 @@ class Record:
             reco = numpy.concatenate(rec)
             logger.debug(str(reco.shape))
 
-        frames = []
-        
         for i in reversed(range(2 * self._pause + 1)):
             t = float(i) / (2 * self._pause)
             f = []
