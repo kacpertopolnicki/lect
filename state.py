@@ -34,21 +34,28 @@ class State:
     def nicestr(self , width = 1000):
         a = "        "
         if self._additional is not None and "frames" in self._additional:
-            a = "(" + format(len(self._additional['frames']) , '5d') + ") "
+            a = " (v)    "
+        if self._additional is not None and "recording" in self._additional:
+            a = " (a)    "
+            #a = "(" + format(len(self._additional['frames']) , '5d') + ") "
+        if self._additional is not None and "frames" in self._additional and "recording" in self._additional:
+            a = " (va)   "
         
 #        new_stack = []
 #
         def same_el(s1 , s2):
-            if s1[1:2] == s2[1:2] == "_":
+            if s1[1:2] == s2[1:2] == "_" and s1[:1] == s2[:1]:
                 if int(s1[2:]) + 1 == int(s2[2:]):
                     return True
                 if int(s1[2:]) == int(s2[2:]) + 1:
                     return True
+                return False
             return False
 
         new_stack = copy.deepcopy(self._stack)
         if self._command is not None:
-            new_stack = list(map(lambda x : '[' + x + ']' if x == self._command else x , new_stack))
+            if new_stack[-1] == self._command:
+                new_stack[-1] = '[' + new_stack[-1] + ']'
 
         logger.debug(str(new_stack))
 
@@ -56,6 +63,8 @@ class State:
         for i in range(1 , len(new_stack)):
             if not same_el(new_stack[i] , new_stack[i - 1]):
                 starts.append(i)
+
+        logger.debug(str(starts))
 
         beginend = []
         for i in range(len(starts) - 1):

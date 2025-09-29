@@ -53,7 +53,13 @@ class Record:
 
         self._set_functions()
 
-        self._iter = 0
+        self._samplerate = self._configuration["sound"].getint("sample_rate")
+
+        self._channels = self._configuration["sound"].getint("channels")
+
+        self._framerate = self._configuration["frames"].getint("frame_rate")
+
+        #self._iter = 0
 
     # PICKLE
 
@@ -92,6 +98,36 @@ class Record:
             new_state = method(self , state)
             self._append(new_state)
 
+    def _make_equalish_time(self , frames , reco):
+        if reco is not None:
+            animation_time = len(frames) / self._framerate
+            recording_time = reco.shape[0] / self._samplerate
+            if recording_time > animation_time:
+                last_frame = frames[-1]
+                to_append = int((recording_time - animation_time) * self._framerate)
+                for _ in range(to_append):
+                    frames.append(last_frame)
+                new_recording_length = int((len(frames) / self._framerate) * self._samplerate)
+                reco = reco[:new_recording_length]
+            else:
+                new_recording_length = (len(frames) / self._framerate) * self._samplerate
+                old_recording_length = reco.shape[0]
+
+                additional_shape = list(reco.shape)
+                additional_shape[0] = int(new_recording_length - old_recording_length)
+                additional_shape = tuple(additional_shape)
+
+                zeros = numpy.zeros(shape = additional_shape , dtype = reco.dtype)
+
+                reco = numpy.concatenate([reco , zeros])
+            return frames , reco
+        else:
+            animation_time = len(frames) / self._framerate
+            recording_length = int(animation_time * self._samplerate)
+
+            reco = numpy.zeros(shape = (recording_length , self._channels) , dtype = 'int16')
+            return frames , reco
+
     # _functions
 
     def _set_functions(self):
@@ -123,11 +159,11 @@ class Record:
             # - same is true for recording names
             if name not in self._savedstacks:
                 self._savedstacks[name] = tosave
-                return State(tosave , [])
+                return State(tosave , None)
             else:
-                return State(stack , [])
+                return State(stack , None)
         else:
-            return State(stack , [])
+            return State(stack , None)
 
     def _appendstack(self , state):
         # todo
@@ -140,11 +176,11 @@ class Record:
             name = stack[-1]
             previous = stack[:-1]
             if name in self._savedstacks:
-                return State(previous + self._savedstacks[name] , [])
+                return State(previous + self._savedstacks[name] , None)
             else:
-                return State(stack , [])
+                return State(stack , None)
         else:
-            return State(stack , [])
+            return State(stack , None)
 
     def _id(self , state):
         stack = state.get_stack()[:-1]
@@ -169,7 +205,7 @@ class Record:
         command = strokes.pop()
 
         if len(strokes) < 1:
-            return State(strokes , [])
+            return State(strokes , None)
 
         xycoord = strokes.pop()
 
@@ -180,7 +216,7 @@ class Record:
             xcoord = (float(xa) / float(xb))
             ycoord = (float(ya) / float(yb)) / self._ar
         except Exception as s:
-            return State(strokes , [])
+            return State(strokes , None)
 
         break_position = -1
         for i in range(len(strokes)):
@@ -317,6 +353,12 @@ class Record:
                                                                 })
                 frames_before += shapes_list
 
+        rec = [self._recordings[s] for s in after if s in self._recordings]
+        reco = None
+        if len(rec) > 0:
+            reco = numpy.concatenate(rec)
+            logger.debug(str(reco.shape))
+
         frames = []
         for istroke in range(len(after)):
             start = []
@@ -350,7 +392,8 @@ class Record:
                 for _ in range(self._pause):
                     frames.append(frames_before + start)        
 
-        return State(strokes , {'frames' : frames})
+        frames , reco = self._make_equalish_time(frames , reco)
+        return State(strokes , {'frames' : frames , 'recording' : reco})
 
     def _drawshort(self , state):
         strokes = self.get_current_stack()
@@ -389,7 +432,13 @@ class Record:
                                                                 })
                 frames_before += shapes_list
 
+        rec = [self._recordings[s] for s in after if s in self._recordings]
+        reco = None
+        if len(rec) > 0:
+            reco = numpy.concatenate(rec)
+            logger.debug(str(reco.shape))
         frames = []
+        
         for istroke in range(len(after)):
             start = []
             for s in after[:istroke]:
@@ -443,7 +492,8 @@ class Record:
                     f += frames_before + shapes_list_part
             frames.append(f)
 
-        return State(before , {'frames' : frames})
+            frames , reco = self._make_equalish_time(frames , reco)
+            return State(before , {'frames' : frames , 'recording' : reco})
 
     def _printout(self , state):
         stack = self.get_current_stack()
@@ -504,7 +554,15 @@ class Record:
                                                                 })
                 f += shapes_list_part
             frames.append(f)
+        
+        rec = [self._recordings[s] for s in stack if s in self._recordings]
+        reco = None
+        if len(rec) > 0:
+            reco = numpy.concatenate(rec)
+            logger.debug(str(reco.shape))
 
+        frames = []
+        
         for i in reversed(range(2 * self._pause + 1)):
             t = float(i) / (2 * self._pause)
             f = []
@@ -524,7 +582,8 @@ class Record:
                 f += shapes_list_part
             frames.append(f)
 
-        return State([] , {'frames' : frames})
+        frames , reco = self._make_equalish_time(frames , reco)
+        return State([] , {'frames' : frames , 'recording' : reco})
  
     def _fadeout(self , state):
         stack = self.get_current_stack()
@@ -558,7 +617,8 @@ class Record:
                 f += shapes_list_part
             frames.append(f)
 
-        return State([] , {'frames' : frames})       
+        frames , reco = self._make_equalish_time(frames , None)
+        return State([] , {'frames' : frames , 'recording' : reco})
 
     def _fadein(self , state):
         stack = self.get_current_stack()
@@ -593,7 +653,8 @@ class Record:
                 f += shapes_list_part
             frames.append(f)
 
-        return State(stack , {'frames' : frames})    
+        frames , reco = self._make_equalish_time(frames , None)
+        return State(stack , {'frames' : frames , 'recording' : reco})
 
     # for interacting
 
@@ -659,8 +720,8 @@ class Record:
         else:
             self._command += char
 
-    def change_command(self , s):
-        self._command = s
+#    def change_command(self , s):
+#        self._command = s
 
     def add_command(self , command):
         logger.debug("add_command(\"" + command + "\")")
@@ -738,7 +799,7 @@ class Record:
 
         additional = state.get_additional()
         if additional is not None:
-            return additional['frames']
+            return additional
         else:
             return None
 
@@ -750,21 +811,21 @@ class Record:
                 f.append(additional)
         return f
 
-    def get_all_frames(self):
-        f = []
-        for s in self._states:
-            additional = s.get_additional()
-            if additional is not None:
-                f += additional['frames']
-        return f
+#    def get_all_frames(self):
+#        f = []
+#        for s in self._states:
+#            additional = s.get_additional()
+#            if additional is not None:
+#                f += additional['frames']
+#        return f
 
-    def get_printout_frames(self):
-        f = []
-        for s in self._states:
-            additional = s.get_additional()
-            if additional is not None and 'printout' in additional:
-                f.append(additional['printout'])
-        return f
+#    def get_printout_frames(self):
+#        f = []
+#        for s in self._states:
+#            additional = s.get_additional()
+#            if additional is not None and 'printout' in additional:
+#                f.append(additional['printout'])
+#        return f
 
     #
 

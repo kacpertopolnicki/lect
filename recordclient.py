@@ -12,6 +12,7 @@ import cv2
 import subprocess
 import sounddevice as sd
 import wave
+import tempfile
 
 from log import logger
 import draw
@@ -31,14 +32,14 @@ RECORD_CLIENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 #N_IN_ON_MOTION = 0
 
 class RecordClient:
-    def __init__(self , output , record ,
+    def __init__(self , animation_output , sound_output , record ,
                  dark_pallete = "default_pallete" , 
                  light_pallete = "default_pallete" , 
-                 printout = None , audio = None , pickle_path = None):
+                 printout = None , pickle_path = None):
 
         # OUTPUT
 
-        self._output_file = output
+        self._output_file = animation_output
 
         self._printout = None
         if printout is not None and (os.path.isdir(printout) or os.path.isfile(printout)):
@@ -93,9 +94,12 @@ class RecordClient:
 
         # SOUND
 
+        self._output_device = self._configuration["sound"]["output_device"]
+        self._input_device = self._configuration["sound"]["input_device"]
         # sauce : https://pythonfriday.dev/2025/07/289-record-audio-with-sounddevice/
-        self._samplerate = 44100
-        self._channels = 1
+        self._samplerate = self._configuration["sound"].getint("sample_rate")
+        self._channels = self._configuration["sound"].getint("channels")
+        self._sound_preview_command = self._configuration["sound"]["sound_preview_command"]
         self._dtype = 'int16'
         self._record_sound = False
         self._recorded_sound_frames = []
@@ -105,7 +109,7 @@ class RecordClient:
 
         self._callback = callback
         self._is = None
-        self._audiopath = audio
+        self._audiopath = sound_output
 
         # CURRENT STROKE
 
@@ -125,6 +129,7 @@ class RecordClient:
 
         # CURSES
 
+        self._status = None
         self._curses_screen = curses.initscr()
         curses.curs_set(0) 
         self._update_curses_screen()
@@ -245,47 +250,69 @@ class RecordClient:
                     self._commands_after_index = 0
                 elif symbol == pyglet.window.key.P:
                     logger.debug("calculating preview")
-                    all_frames = self._record.get_frames(cursor = self._state_cursor)
 
-                    antialias = 1
-                    if all_frames is not None:
-                        try:
+                    additional = self._record.get_frames(cursor = self._state_cursor)
 
-                            fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-                            video = cv2.VideoWriter(
-                                    self._output_file , 
-                                    fourcc, 
-                                    self._frame_rate , 
-                                    (self._frame_preview_width , self._frame_preview_height)
-                                    )
+                    if additional is not None and "frames" in additional:
 
-                            i = 1
-                            for frame in all_frames:
-                                self._set_colors(self._dark_pallete)
-                                self._update_curses_screen("Calculating preview frame " + str(i) + " / " + str(len(all_frames)) + ".")
-                                i += 1
-                                r , b , g  = self._paper_color
-                                a = 255
-                                frame_pil = PIL.Image.new(
-                                                        mode = "RGBA" , 
-                                                        size = (self._frame_preview_width * antialias , self._frame_preview_height * antialias) , 
-                                                        color = (r , b , g , a))
-                                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
-                                draw.pil_draw_shapes(
-                                        frame_pil_draw ,
-                                        frame ,
-                                        self._get_rectangle(
-                                            size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
-                                if antialias != 1:
-                                    frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
-                                video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
-                        except Exceptions as e:
-                            video.release()
-                            subprocess.run(self._preview_command.strip().split() + [self._output_file])
-                            raise e
-                        finally:
-                            video.release()
-                            subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                        all_frames = additional["frames"]
+
+                        antialias = 1
+                        if all_frames is not None:
+                            try:
+                                # TODO tempfile
+
+                                filepath = os.path.join(RECORD_CLIENT_DIRECTORY , "temporary.mp4")
+
+                                fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+                                video = cv2.VideoWriter(
+                                        filepath , 
+                                        fourcc, 
+                                        self._frame_rate , 
+                                        (self._frame_preview_width , self._frame_preview_height)
+                                        )
+
+                                i = 1
+                                for frame in all_frames:
+                                    self._set_colors(self._dark_pallete)
+                                    self._status = "Calculating preview frame " + str(i) + " / " + str(len(all_frames)) + "."
+                                    self._update_curses_screen()
+                                    i += 1
+                                    r , b , g  = self._paper_color
+                                    a = 255
+                                    frame_pil = PIL.Image.new(
+                                                            mode = "RGBA" , 
+                                                            size = (self._frame_preview_width * antialias , self._frame_preview_height * antialias) , 
+                                                            color = (r , b , g , a))
+                                    frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                    draw.pil_draw_shapes(
+                                            frame_pil_draw ,
+                                            frame ,
+                                            self._get_rectangle(
+                                                size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
+                                    if antialias != 1:
+                                        frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
+                                    video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
+                            except Exceptions as e:
+                                video.release()
+                                subprocess.run(self._preview_command.strip().split() + [filepath])
+                                raise e
+                            finally:
+                                video.release()
+                                subprocess.run(self._preview_command.strip().split() + [filepath])
+                        if "recording" in additional:
+                            filepath = os.path.join(RECORD_CLIENT_DIRECTORY , "temporary.wav")
+                            frames = additional["recording"]
+                            with wave.open(filepath, 'wb') as wf:
+                                wf.setnchannels(self._channels)
+                                wf.setsampwidth(numpy.dtype(self._dtype).itemsize)
+                                wf.setframerate(self._samplerate)
+                                wf.writeframes(frames.tobytes())
+                            subprocess.run(self._sound_preview_command.strip().split() + [filepath])
+
+                            #sd.play(frames , samplerate = self._samplerate , device = self._output_device)
+
+                    self._status = None
                 elif symbol == pyglet.window.key.S:
                     all_additional = self._record.get_all_additional()
 
@@ -305,6 +332,7 @@ class RecordClient:
                                 (self._frame_width , self._frame_height)
                                 )
 
+                        all_recordings = []
                         i_frame = 1
                         i_printout = 1
                         for aa in all_additional:
@@ -312,7 +340,8 @@ class RecordClient:
                                 self._set_colors(self._dark_pallete)
                                 frames = aa["frames"]
                                 for frame in frames:
-                                    self._update_curses_screen("Calculating frame " + str(i_frame) + " / " + str(len_all_frames) + ".")
+                                    self._status = "Calculating frame " + str(i_frame) + " / " + str(len_all_frames) + "."
+                                    self._update_curses_screen()
                                     logger.info("Calculating frame " + str(i_frame) + " / " + str(len_all_frames) + ".")
                                     r , b , g  = self._paper_color
                                     a = 255
@@ -332,7 +361,8 @@ class RecordClient:
                                     i_frame += 1
                             if "printout" in aa:
                                 self._set_colors(self._light_pallete)
-                                self._update_curses_screen("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
+                                self._status = "Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + "."
+                                self._update_curses_screen()
                                 logger.info("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
                                 frame = aa["printout"]
                                 r , b , g  = self._paper_color
@@ -357,34 +387,50 @@ class RecordClient:
                                 logger.debug("frame_pil : " + str(frame_pil))
                                 frame_pil.save(path)
                                 i_printout += 1
-                    except Exceptions as e:
+                            if "recording" in aa:
+                                all_recordings.append(aa["recording"])
+
+                        all_recordings = numpy.concatenate(all_recordings)
+                        with wave.open(self._audiopath, 'wb') as wf:
+                            wf.setnchannels(self._channels)
+                            wf.setsampwidth(numpy.dtype(self._dtype).itemsize)
+                            wf.setframerate(self._samplerate)
+                            wf.writeframes(all_recordings.tobytes())
+
+                    except Exception as e:
                         video.release()
                         subprocess.run(self._preview_command.strip().split() + [self._output_file])
                         raise e
                     finally:
                         video.release()
                         subprocess.run(self._preview_command.strip().split() + [self._output_file])
+                    self._status = None
                     
                 elif symbol == pyglet.window.key.G:
                     if not self._record_sound:
                         logger.debug("starting recording")
-                        self._update_curses_screen("starting recording")
+                        self._status = "starting recording"
+                        self._update_curses_screen()
+                        # sauce
                         self._is = sd.InputStream(samplerate = self._samplerate,
                                                   channels = self._channels,
                                                   dtype = self._dtype,
-                                                  callback = self._callback)
+                                                  callback = self._callback, device = self._input_device)
                         self._is.start()
                         self._record_sound = True
                     else:
                         logger.debug("ending recording")
-                        self._update_curses_screen("ending recording")
+                        self._status = "ending recording"
+                        self._update_curses_screen()
                         self._is.stop()
                         self._is.close()
+                        self._is = None
                         self._record_sound = False
                         self._recorded_sound_frames = numpy.concatenate(self._recorded_sound_frames)
                         self._record.add_sound(self._recorded_sound_frames)
                         logger.debug("done " + str(self._recorded_sound_frames.shape))
                         self._recorded_sound_frames = []
+                        self._status = None
                 elif symbol == pyglet.window.key.W:
                     logger.debug("saving" + str(self._pickle_path))
                     if self._pickle_path is not None:
@@ -450,6 +496,11 @@ class RecordClient:
         else:
             raise RuntimeError("No graphics tablet detected.")
 
+    def clean(self):
+        if self._is is not None:
+            self._is.stop()
+            self._is.close()
+
     def _set_colors(self , pallete):
         self._paper_color = list(map(int , self._configuration[pallete]["paper_color"].split(",")))
 
@@ -460,16 +511,17 @@ class RecordClient:
                                         ]
                         ]
 
-    def _update_curses_screen(self , string = None):
+    def _update_curses_screen(self):
         height , width = self._curses_screen.getmaxyx()
         self._curses_screen.clear()
-        if string is None:
+        if self._status is None:
             self._curses_screen.addstr(("          " + 
                         self._record.get_current_command())[:width - 10] + "\n\n" + 
                         self._record.nicestr(cursor = self._state_cursor , 
                                              width = width - 2 , height = height , 
                                              additional = list(map(lambda x : "          [" + x + "]" , self._commands_after))))
         else:
+            string = copy.deepcopy(self._status)
             string = string.strip()
             string = string.replace("\n" , " , ")
             string = string[-width:]

@@ -10,7 +10,8 @@ import curses
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog = "lect")
-    parser.add_argument("output" , help = "Path to output file.")
+    parser.add_argument("animation" , help = "Path to output file for animation.")
+    parser.add_argument("audio" , help = "Path to file to save audio data.")
     parser.add_argument("-l" , "--load" , help = "Path to file with saved lect data.")
     parser.add_argument("-s" , "--save" , help = "Path to file to save lect data.")
     parser.add_argument("-p" , "--printout" , help = "Path to directory for printout." , default = None)
@@ -36,15 +37,20 @@ if __name__ == "__main__":
                             dark_pallete = "default_pallete" ,
                             light_pallete = "light_pallete")
 
-    record_client = recordclient.RecordClient(args.output , rec ,
-                                              dark_pallete = "default_pallete" ,
-                                              light_pallete = "light_pallete" ,
-                                              printout = args.printout , pickle_path = args.save)
-    record_client.run()
+    try:
+        record_client = recordclient.RecordClient(args.animation , args.audio , rec ,
+                                                  dark_pallete = "default_pallete" ,
+                                                  light_pallete = "light_pallete" ,
+                                                  printout = args.printout , pickle_path = args.save)
+        record_client.run()
 
-    if args.save is not None:
-        with open(args.save , "wb") as f:
-            pickle.dump(rec , f)
+    finally:
 
-    curses.echo()
-    curses.endwin()
+        record_client.clean()
+
+        if args.save is not None:
+            with open(args.save , "wb") as f:
+                pickle.dump(rec , f)
+
+        curses.echo()
+        curses.endwin()
