@@ -37,12 +37,9 @@ class State:
             a = " (v)    "
         if self._additional is not None and "recording" in self._additional:
             a = " (a)    "
-            #a = "(" + format(len(self._additional['frames']) , '5d') + ") "
         if self._additional is not None and "frames" in self._additional and "recording" in self._additional:
             a = " (va)   "
         
-#        new_stack = []
-#
         def same_el(s1 , s2):
             if s1[1:2] == s2[1:2] == "_" and s1[:1] == s2[:1]:
                 if int(s1[2:]) + 1 == int(s2[2:]):
@@ -78,20 +75,6 @@ class State:
                     rep.append(be[0])
                 else:
                     rep.append(be[0] + "-" + be[-1])
-#
-#        startend = []
-#        start = 0
-#        end = 0
-#        j = 0
-#        for i in range(len(self._stack)):
-#            if not same_el(self._stack[i] , self._stack[j]):
-#                end = j
-#                startend.append((start , end))
-#                start = i
-#            j = i
-#
-#        logger.debug(",".join(self._stack))
-#        logger.debug(str(startend))
 
         new_stack = copy.deepcopy(self._stack)
         if self._command is not None:

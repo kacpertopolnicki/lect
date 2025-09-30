@@ -22,15 +22,6 @@ import time
 
 RECORD_CLIENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-#TIME_IN_ON_RESIZE = 0
-#TIME_IN_ON_DRAW = 0
-#TIME_IN_ON_KEY_RELEASE = 0
-#TIME_IN_ON_MOTION = 0
-#N_IN_ON_RESIZE = 0
-#N_IN_ON_DRAW = 0
-#N_IN_ON_KEY_RELEASE = 0
-#N_IN_ON_MOTION = 0
-
 class RecordClient:
     def __init__(self , animation_output , sound_output , record ,
                  dark_pallete = "default_pallete" , 
@@ -40,6 +31,12 @@ class RecordClient:
         # OUTPUT
 
         self._output_file = animation_output
+        if (os.path.isdir(animation_output) or os.path.isfile(animation_output)):
+            raise ValueError("Animation output path exists.")
+
+        self._audiopath = sound_output
+        if (os.path.isdir(sound_output) or os.path.isfile(sound_output)):
+            raise ValueError("Sound output path exists.")
 
         self._printout = None
         if printout is not None and (os.path.isdir(printout) or os.path.isfile(printout)):
@@ -109,7 +106,6 @@ class RecordClient:
 
         self._callback = callback
         self._is = None
-        self._audiopath = sound_output
 
         # CURRENT STROKE
 
@@ -148,17 +144,11 @@ class RecordClient:
 
         @self._window.event
         def on_resize(width , height):
-            #global TIME_IN_ON_RESIZE , N_IN_ON_RESIZE
-            #tme = time.time()
             self._window_width , self._window_height = self._window.get_size()
             self._stroke_recalculate = True
-            #TIME_IN_ON_RESIZE += time.time() - tme
-            #N_IN_ON_RESIZE += 1
 
         @self._window.event
         def on_draw():
-            #global TIME_IN_ON_DRAW , N_IN_ON_DRAW
-            #tme = time.time()
             self._window.clear()
             x0 , y0 , x1 , y1 = self._get_rectangle()
 
@@ -205,16 +195,9 @@ class RecordClient:
                     logger.debug(" self._stroke.batches[s] = " + str(self._stroke_batches[s]))
                 self._stroke_batches[s].draw()
             self._stroke_recalculate = False
-            #TIME_IN_ON_DRAW += time.time() - tme
-            #N_IN_ON_DRAW += 1
 
         @self._window.event
         def on_key_release(symbol , modifiers):
-            #global TIME_IN_ON_RESIZE , N_IN_ON_RESIZE
-            #global TIME_IN_ON_DRAW , N_IN_ON_DRAW
-            #global TIME_IN_ON_KEY_RELEASE , N_IN_ON_KEY_RELEASE
-            #global TIME_IN_ON_MOTION , N_IN_ON_MOTION
-            #tme = time.time()
             if modifiers == pyglet.window.key.MOD_CTRL:
                 if 48 <= symbol <= 57:
                     logger.debug("color number = " + str(int(symbol) - 48) + ".")
@@ -260,8 +243,6 @@ class RecordClient:
                         antialias = 1
                         if all_frames is not None:
                             try:
-                                # TODO tempfile
-
                                 filepath = os.path.join(RECORD_CLIENT_DIRECTORY , "temporary.mp4")
 
                                 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
@@ -309,8 +290,6 @@ class RecordClient:
                                 wf.setframerate(self._samplerate)
                                 wf.writeframes(frames.tobytes())
                             subprocess.run(self._sound_preview_command.strip().split() + [filepath])
-
-                            #sd.play(frames , samplerate = self._samplerate , device = self._output_device)
 
                     self._status = None
                 elif symbol == pyglet.window.key.A:
@@ -381,7 +360,7 @@ class RecordClient:
                                             size = (antialias * self._frame_preview_width , antialias * self._frame_preview_height)))
                                 if self._antialias != 1:
                                     logger.debug("frame_pil.resize(...)")
-                                    frame_pil = frame_pil.resize((self._frame_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
+                                    frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
                                 logger.debug(self._printout)
                                 logger.debug(str(i_printout))
                                 path = os.path.join(self._printout , str(i_printout) + ".png")
@@ -401,12 +380,8 @@ class RecordClient:
 
                     except Exception as e:
                         video.release()
-                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
-                        #subprocess.run(self._sound_preview_command.strip().split() + [self._audiopath])
                         raise e
                     finally:
-                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
-                        #subprocess.run(self._sound_preview_command.strip().split() + [self._audiopath])
                         video.release()
                     self._status = None
 
@@ -496,11 +471,9 @@ class RecordClient:
 
                     except Exception as e:
                         video.release()
-                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
                         raise e
                     finally:
                         video.release()
-                        #subprocess.run(self._preview_command.strip().split() + [self._output_file])
                     self._status = None
                     
                 elif symbol == pyglet.window.key.G:
@@ -548,27 +521,6 @@ class RecordClient:
                     self._state_cursor = -1
 
             self._update_curses_screen()
-            #TIME_IN_ON_KEY_RELEASE += time.time() - tme
-            #N_IN_ON_KEY_RELEASE += 1
-
-            #tot  = TIME_IN_ON_RESIZE + TIME_IN_ON_DRAW + TIME_IN_ON_KEY_RELEASE + TIME_IN_ON_MOTION
-            #msg = []
-            #msg.append(str(TIME_IN_ON_RESIZE / N_IN_ON_RESIZE if N_IN_ON_RESIZE > 0 else 0) + " " + str(TIME_IN_ON_RESIZE / tot))
-            #msg.append(str(TIME_IN_ON_DRAW / N_IN_ON_DRAW if N_IN_ON_DRAW > 0 else 0) + " " + str(TIME_IN_ON_DRAW / tot))
-            #msg.append(str(TIME_IN_ON_KEY_RELEASE / N_IN_ON_KEY_RELEASE if N_IN_ON_KEY_RELEASE > 0 else 0) + " " + str(TIME_IN_ON_KEY_RELEASE / tot))
-            #msg.append(str(TIME_IN_ON_MOTION / N_IN_ON_MOTION if N_IN_ON_MOTION > 0 else 0) + " " + str(TIME_IN_ON_MOTION / tot))
-            #logger.info("\n".join(msg))
-            #if min(N_IN_ON_RESIZE , N_IN_ON_DRAW , N_IN_ON_KEY_RELEASE , N_IN_ON_MOTION) > 100:
-                #TIME_IN_ON_RESIZE = 0
-                #TIME_IN_ON_DRAW = 0
-                #TIME_IN_ON_KEY_RELEASE = 0
-                #TIME_IN_ON_MOTION = 0
-                #N_IN_ON_RESIZE = 0
-                #N_IN_ON_DRAW = 0
-                #N_IN_ON_KEY_RELEASE = 0
-                #N_IN_ON_MOTION = 0
-     
-        # TABLET
 
         tablets = pyglet.input.get_tablets()
         if len(tablets) > 0:
@@ -577,8 +529,6 @@ class RecordClient:
         
             @self._tablet.event
             def on_motion(cursor, x, y, pressure, *rest):
-                #global TIME_IN_ON_MOTION , N_IN_ON_MOTION
-                #tme = time.time()
                 x0 , y0 , x1 , y1 = self._get_rectangle()
                 xx = (x - x0) / (x1 - x0)
                 yy = (y - y0) / (x1 - x0)
@@ -588,8 +538,6 @@ class RecordClient:
 
                 if len(self._record) != l:
                     self._update_curses_screen()
-                #TIME_IN_ON_MOTION += time.time() - tme
-                #N_IN_ON_MOTION += 1
         else:
             raise RuntimeError("No graphics tablet detected.")
 

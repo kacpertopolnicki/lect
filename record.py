@@ -56,10 +56,10 @@ class Record:
         self._samplerate = self._configuration["sound"].getint("sample_rate")
 
         self._channels = self._configuration["sound"].getint("channels")
+        
+        self._fade = self._configuration["sound"].getfloat("fade")
 
         self._framerate = self._configuration["frames"].getint("frame_rate")
-
-        #self._iter = 0
 
     # PICKLE
 
@@ -79,13 +79,14 @@ class Record:
                 self._pause ,
                 self._samplerate , 
                 self._channels ,
+                self._fade ,
                 self._framerate)
 
     def __setstate__(self , state):
         self._unique , self._strokes , self._recordings , self._savedstacks , self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause , \
-        self._samplerate , self._channels , self._framerate = state
+        self._samplerate , self._channels , self._fade , self._framerate = state
         
         self._stroke = []
         self._command = ""
@@ -441,6 +442,7 @@ class Record:
         if len(rec) > 0:
             reco = numpy.concatenate(rec)
             logger.debug(str(reco.shape))
+
         frames = []
         
         for istroke in range(len(after)):
@@ -496,8 +498,8 @@ class Record:
                     f += frames_before + shapes_list_part
             frames.append(f)
 
-            frames , reco = self._make_equalish_time(frames , reco)
-            return State(before , {'frames' : frames , 'recording' : reco})
+        frames , reco = self._make_equalish_time(frames , reco)
+        return State(before , {'frames' : frames , 'recording' : reco})
 
     def _printout(self , state):
         stack = self.get_current_stack()
@@ -681,7 +683,25 @@ class Record:
         self._unique += 1
        
         logger.debug("Adding sound " + name + " with length " + str(snd.shape) + ".")
-        
+      
+        fadenum = int(self._fade * self._samplerate)
+
+        if snd.shape[0] > 2 * fadenum:
+            snd = snd[fadenum : -fadenum]
+            if snd.shape[0] > fadenum:
+                # todo, mask to __init__
+                mask = numpy.linspace(0.0 , 1.0 , fadenum)
+                shpe = list(snd.shape)
+                shpe[0] = fadenum
+                shpe = tuple(shpe)
+                mask = mask.reshape(shpe)
+
+                snd[:fadenum] = (snd[:fadenum] * mask).astype(snd.dtype)
+
+                snd[-fadenum:] = (snd[-fadenum:] * mask).astype(snd.dtype)
+
+        logger.debug(name)
+        logger.debug(str(snd.shape))
         self._recordings[name] = snd
                 
         state = self._states[-1]
@@ -813,24 +833,6 @@ class Record:
                 f.append(additional)
         return f
 
-#    def get_all_frames(self):
-#        f = []
-#        for s in self._states:
-#            additional = s.get_additional()
-#            if additional is not None:
-#                f += additional['frames']
-#        return f
-
-#    def get_printout_frames(self):
-#        f = []
-#        for s in self._states:
-#            additional = s.get_additional()
-#            if additional is not None and 'printout' in additional:
-#                f.append(additional['printout'])
-#        return f
-
-    #
-
     def __len__(self):
         return len(self._states)
 
@@ -841,13 +843,14 @@ class Record:
         return string
     
     def nicestr(self , cursor = None , width = 1000 , height = 1000 , additional = []):
-        #statelist = ["  " + format(i , '5d') + " : " + self._states[i].nicestr(width = width) 
-        #         for i in range(len(self._states))]
+        if len(self._states) == 0:
+            return ""
+
         statelist = ["  " + self._states[i].nicestr(width = width - 2) 
                  for i in range(len(self._states))]
+        statelist[0] = "0 " + self._states[0].nicestr(width = width - 2)
         if cursor is not None:
             pos = cursor % len(self._states)
-            #statelist[pos] = "| " + format(pos , '5d') + " : " + self._states[pos].nicestr(width = width) 
             statelist[pos] = "| " + self._states[pos].nicestr(width = width - 2) 
 
         statelist += additional
@@ -865,16 +868,12 @@ class Record:
                 add = -start
                 start += add
                 end += add
-            if end > len(self._states):
-                sub = end - len(self._states)
+            if end > len(statelist):
+                sub = end - len(statelist)
                 start -= sub
                 end -= sub
 
-        #logger.debug("pos , height , start , end , len(self._states) : " + str(pos) + " " + str(height) + " " + str(start) + " " + str(end) + " " + str(len(self._states)))
-
         if len(statelist) > height - 3:
-            #string = "    ... : ...\n" + "\n".join(statelist[-(height - 3):])
-            #string = "    ... : ...\n" + "\n".join(statelist[start : end])
             string = "\n".join(statelist[start : end])
             return string
         else:
