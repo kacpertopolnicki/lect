@@ -19,6 +19,8 @@ class Record:
 
         self._recordings = dict()
 
+        self._images = dict()
+
         self._savedstacks = dict()
 
         self._configuration = copy.deepcopy(configuration)
@@ -67,6 +69,7 @@ class Record:
         return (self._unique ,
                 self._strokes , 
                 self._recordings ,
+                self._images ,
                 self._savedstacks ,
                 self._configuration , 
                 self._states , 
@@ -83,7 +86,8 @@ class Record:
                 self._framerate)
 
     def __setstate__(self , state):
-        self._unique , self._strokes , self._recordings , self._savedstacks , self._configuration , self._states , \
+        self._unique , self._strokes , self._recordings , self._images , self._savedstacks , \
+        self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause , \
         self._samplerate , self._channels , self._fade , self._framerate = state
@@ -104,6 +108,7 @@ class Record:
             self._append(new_state)
 
     def _make_equalish_time(self , frames , reco):
+        # todo, call this in _append instead of individual functions
         if reco is not None:
             animation_time = len(frames) / self._framerate
             recording_time = reco.shape[0] / self._samplerate

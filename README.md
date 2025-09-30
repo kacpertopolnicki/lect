@@ -1,16 +1,18 @@
 # lect
-Recorder for lectures ... right now just a list to todos.
+
+A simple recorder for lectures and presentations.
+Currently in early stages of development. 
+
+Traditionally, information in technical subjects (mathematics, physics, ...)
+was shared using chalk and a blackboard. This simple medium is surprisingly
+efficient and *lect* is a modern take on this approach. 
 
 # todo
 
-- ctrl-s parallel
-
-- setup structure for pip
+- ctrl-s ctrl-a parallel
 - add documentation
+- setup code structure for pip
 - add tutorial to README.md
-- key shortcuts in config
-
-# done
-
-- problem with ctrl-d when cutting on center
-  - for the moment be carefull
+- configure key shortcuts in config file
+- remove most calls to logger.debug
+- read todos in code
