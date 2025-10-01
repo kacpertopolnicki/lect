@@ -151,6 +151,7 @@ class Record:
                 "printout" : Record._printout ,
                 "center" : Record._center ,
                 "position" : Record._position ,
+                "iposition" : Record._iposition ,
                 "clear" : Record._clear ,
                 "savestack" : Record._savestack ,
                 "appendstack" : Record._appendstack ,
@@ -348,6 +349,8 @@ class Record:
         logger.debug(before)
         logger.debug(after)
 
+        background = [self._images[s] for s in strokes if s in self._images]
+        
         frames_before = []
         for i in range(len(before)):
             s = before[i]
@@ -403,7 +406,7 @@ class Record:
                     frames.append(frames_before + start)        
 
         frames , reco = self._make_equalish_time(frames , reco)
-        return State(strokes , {'frames' : frames , 'recording' : reco})
+        return State(strokes , {'frames' : frames , 'recording' : reco , 'background' : background})
 
     def _drawshort(self , state):
         strokes = self.get_current_stack()
@@ -426,6 +429,8 @@ class Record:
 
         logger.debug("before : " + str(before))
         logger.debug("after : " + str(after))
+
+        background = [self._images[s] for s in strokes if s in self._images]
 
         frames_before = []
         for i in range(len(before)):
@@ -504,12 +509,14 @@ class Record:
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , reco)
-        return State(before , {'frames' : frames , 'recording' : reco})
+        return State(before , {'frames' : frames , 'recording' : reco , 'background' : background})
 
     def _printout(self , state):
         stack = self.get_current_stack()
         stack.pop()
 
+        background = [self._images[s] for s in stack if s in self._images]
+        
         strokes = []
         
         for s in stack:
@@ -532,11 +539,13 @@ class Record:
                                                             })
             frame += shapes_list_part
 
-        return State(stack , {"printout" : frame})
+        return State(stack , {"printout" : frame , "background" : background})
 
     def _show(self , state):
         stack = self.get_current_stack()
 
+        background = [self._images[s] for s in stack if s in self._images]
+        
         strokes = []
 
         for s in stack:
@@ -592,11 +601,13 @@ class Record:
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , reco)
-        return State([] , {'frames' : frames , 'recording' : reco})
+        return State([] , {'frames' : frames , 'recording' : reco , 'background' : background})
  
     def _fadeout(self , state):
         stack = self.get_current_stack()
 
+        background = [self._images[s] for s in stack if s in self._images]
+        
         strokes = []
 
         for s in stack:
@@ -627,12 +638,14 @@ class Record:
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , None)
-        return State([] , {'frames' : frames , 'recording' : reco})
+        return State([] , {'frames' : frames , 'recording' : reco , 'background' : background})
 
     def _fadein(self , state):
         stack = self.get_current_stack()
         stack.pop()
 
+        background = [self._images[s] for s in stack if s in self._images]
+        
         strokes = []
 
         for s in stack:
@@ -663,7 +676,58 @@ class Record:
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , None)
-        return State(stack , {'frames' : frames , 'recording' : reco})
+        return State(stack , {'frames' : frames , 'recording' : reco , 'background' : background})
+    
+    def _iposition(self , state):
+        strokes = self.get_current_stack()
+        command = strokes.pop()
+
+        if len(strokes) < 1:
+            return State(strokes , None)
+
+        xycoord = strokes.pop()
+
+        xcoord , ycoord , scale = None , None , None
+        try:
+            xcoord , ycoord , scale = xycoord.split(',')
+            xa , xb = xcoord.split('/')
+            ya , yb = ycoord.split('/')
+            scalea , scaleb = scale.split('/')
+            xcoord = (float(xa) / float(xb))
+            ycoord = (float(ya) / float(yb)) / self._ar
+            scale = (float(scalea) / float(scaleb))
+        except Exception as s:
+            return State(strokes , None)
+
+        logger.debug(str(xcoord) + " " + str(ycoord) + " " + str(scale))
+
+        break_position = -1
+        for i in range(len(strokes)):
+            s = strokes[i]
+            if s == "---":
+                break_position = i
+
+        new_stack = []
+        for i in range(len(strokes)):
+            s = strokes[i]
+            if i > break_position:
+                if s in self._images:
+                    im = self._images[s]
+
+                    newim = {"data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : xcoord - 0.5 * im["w"] * scale ,
+                             "y0" : ycoord - 0.5 * im["h"] * scale ,
+                             "w" : im["w"] * scale ,
+                             "h" : im["h"] * scale}
+
+                    new_stack.append(self.add_full_image(newim))
+                else:
+                    new_stack.append(s)
+            else:
+                new_stack.append(s)
+
+        return State(new_stack , None)
 
     # for interacting
 
@@ -677,6 +741,17 @@ class Record:
         logger.debug("Adding full stroke " + name + " with length " + str(len(pts)) + ".")
         
         self._strokes[name] = pts
+
+        return name
+
+    def add_full_image(self , image):
+
+        name = "i_" + str(self._unique)
+        self._unique += 1
+       
+        logger.debug("Adding full image.")
+        
+        self._images[name] = image
 
         return name
 
@@ -712,6 +787,39 @@ class Record:
         state = self._states[-1]
         new_state = state.add_to_program(name)
         self._append(new_state)
+
+    def add_image(self , image):
+ 
+        if image.shape[2] == 3:
+
+            img = image.copy()
+
+            name = "i_" + str(self._unique)
+            self._unique += 1
+
+            logger.debug("Adding image " + name + " with shape " + str(img.shape) + ".")
+
+            ar = image.shape[1] / image.shape[0]
+
+            if ar <= self._ar:
+                # fit height
+                w = ar / self._ar
+                h = 1.0 / self._ar
+                x0 = 0.5 - 0.5 * w
+                y0 = 0.0
+                self._images[name] = {"data" : img , "ar" : ar , 'x0' : x0 , 'y0' : y0 , 'w' : w , 'h' : h}
+            else:
+                # fit width
+                w = 1.0
+                h = 1.0 / ar
+                x0 = 0.0
+                y0 = 0.5 - 0.5 * h
+                self._images[name] = {"data" : img , "ar" : ar , 'x0' : x0 , 'y0' : y0 , 'w' : w , 'h' : h}
+                    
+            state = self._states[-1]
+            new_state = state.add_to_program(name)
+            self._append(new_state)
+
 
     def add_to_stroke(self , x , y , p , t , c):
         if p == 0:
@@ -791,6 +899,12 @@ class Record:
             return copy.deepcopy(self._strokes[name])
         else:
             return None
+    
+    def get_image(self , name):
+        if name in self._images:
+            return copy.deepcopy(self._images[name])
+        else:
+            return None
 
     def reexecute(self , cursor = None):
         pos = len(self._states) - 1
@@ -807,6 +921,15 @@ class Record:
             stack = self._states[cursor % len(self._states)].get_stack()
       
         return [s for s in stack if s in self._strokes]
+
+    def get_current_images(self , cursor = None):
+        stack = None
+        if cursor is None:
+            stack = self._states[-1].get_stack()
+        else:
+            stack = self._states[cursor % len(self._states)].get_stack()
+      
+        return [s for s in stack if s in self._images]
 
     def get_current_stack(self , cursor = None):
         stack = None
