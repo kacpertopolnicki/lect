@@ -16,3 +16,4 @@ efficient and *lect* is a modern take on this approach.
 - configure key shortcuts in config file
 - remove most calls to logger.debug
 - read todos in code
+- fade in and fade out of background
