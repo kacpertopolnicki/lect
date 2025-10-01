@@ -50,6 +50,7 @@ every = 10
 pause = 24
 frame_rate = 24
 preview_command = mpv --loop
+background_pause = 24
 
 [sound]
 
