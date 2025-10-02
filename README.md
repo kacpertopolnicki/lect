@@ -9,6 +9,7 @@ efficient and *lect* is a modern take on this approach.
 
 # todo
 
+- _center , _draw ... to take stack and return state
 - ctrl-s ctrl-a parallel
 - add documentation
 - setup code structure for pip
