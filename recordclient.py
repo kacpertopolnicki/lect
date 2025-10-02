@@ -154,6 +154,9 @@ class RecordClient:
             self._window.clear()
             x0 , y0 , x1 , y1 = self._get_rectangle()
 
+            #self._set_colors(self._dark_pallete)
+            r , b , g  = self._paper_color
+
             self._paper_batch = pyglet.graphics.Batch()
             self._paper = pyglet.shapes.Rectangle(
                 x0 , y0 , 
@@ -170,50 +173,40 @@ class RecordClient:
                 multiline = pyglet.shapes.MultiLine(*points , color = (255 , 255 , 255) , batch = self._current_batch)
                 self._current_shapes = [multiline]
                 self._current_batch.draw()
-
-            current_images = self._record.get_current_images(cursor = self._state_cursor)
-
-            for current_image in current_images:
-                if (current_image not in self._sprites) or self._stroke_recalculate:
-                    idct = self._record.get_image(current_image)
-                    h , w = idct["data"].shape[:2]
-                    xx = int(x0 + idct["x0"] * (x1 - x0))
-                    yy = int(y0 + idct["y0"] * (x1 - x0))
-                    ww = int(idct["w"] * (x1 - x0))
-                    hh = int(idct["h"] * (x1 - x0))
-                    logger.debug(str(idct["data"].shape) + " " + str(idct["data"].dtype))
-                    data_ = cv2.resize(idct["data"], (ww, hh))
-                    logger.debug(str(data_.shape) + " " + str(data_.dtype))
-                    data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(numpy.uint8).tobytes()
-                    image = pyglet.image.ImageData(width = ww , height = hh , fmt = 'RGB' , data = data_ , pitch = -3 * ww)
-                    sprite = pyglet.sprite.Sprite(img = image , x = xx , y = yy)
-                    self._sprites[current_image] = sprite
-                self._sprites[current_image].draw()
-
-            current_strokes = self._record.get_current_strokes(cursor = self._state_cursor)
+    
+            current_strokes = self._record.get_current_strokes_images(cursor = self._state_cursor)
 
             for s in current_strokes:
                 if (s not in self._stroke_batches) or self._stroke_recalculate:
-                    logger.debug("Recalculating stroke " + s + ".")
-                    pts = self._record.get_stroke(s)
-                    
-                    color = int(pts[0][4]) # todo, instead of parameters
-                    thickness , red , green , blue , opacity = self._colors[color]
+                    t = self._record.get_type(s)
+                    if t is not None and t == "stroke":
+                        logger.debug("Recalculating stroke " + s + ".")
+                        pts = self._record.get_stroke(s)
+                        
+                        color = int(pts[0][4]) # todo, instead of parameters
+                        thickness , red , green , blue , opacity = self._colors[color]
 
-                    shapes_list = draw.simple_stroke_shapes(pts , 
-                                                            parameters = {
-                                                                   "thickness" : thickness , 
-                                                                    "color" : (int(red) , int(green) , int(blue)) ,
-                                                                    "opacity" : int(opacity)
-                                                                    })
-                    
-                    self._stroke_batches[s] = pyglet.graphics.Batch()
-                    self._stroke_shapes[s] = []
+                        shapes_list = draw.simple_stroke_shapes(pts , 
+                                                                parameters = {
+                                                                       "thickness" : thickness , 
+                                                                        "color" : (int(red) , int(green) , int(blue)) ,
+                                                                        "opacity" : int(opacity)
+                                                                        })
+                        
+                        self._stroke_batches[s] = pyglet.graphics.Batch()
+                        self._stroke_shapes[s] = []
 
-                    draw.pyglet_draw_shapes(shapes_list , (x0 , y0 , x1 , y1) , shps = self._stroke_shapes[s] , batch = self._stroke_batches[s])
+                        draw.pyglet_draw_shapes(shapes_list , (x0 , y0 , x1 , y1) , shps = self._stroke_shapes[s] , batch = self._stroke_batches[s] , background = (r , g , b))
 
-                    logger.debug(" len(self._stroke_shapes[s]) = " + str(len(self._stroke_shapes[s])))
-                    logger.debug(" self._stroke.batches[s] = " + str(self._stroke_batches[s]))
+                        logger.debug(" len(self._stroke_shapes[s]) = " + str(len(self._stroke_shapes[s])))
+                        logger.debug(" self._stroke.batches[s] = " + str(self._stroke_batches[s]))
+                    elif t is not None and t == "image":
+                        logger.debug("Recalculating image " + s + ".")
+                        img = self._record.get_image(s)
+                        shapes_list = [img]
+                        self._stroke_batches[s] = pyglet.graphics.Batch()
+                        self._stroke_shapes[s] = []
+                        draw.pyglet_draw_shapes(shapes_list , (x0 , y0 , x1 , y1) , shps = self._stroke_shapes[s] , batch = self._stroke_batches[s] , background = (r , g , b))
                 self._stroke_batches[s].draw()
             self._stroke_recalculate = False
 
@@ -259,22 +252,6 @@ class RecordClient:
 
                     additional = self._record.get_frames(cursor = self._state_cursor)
                     
-                    bkg = []
-                    if additional is not None and "background" in additional:
-                        b = additional["background"]
-                        x0 , y0 = 0 , 0
-                        x1 , y1 = self._frame_preview_width * self._antialias , self._frame_preview_height * self._antialias
-                        for idct in b:
-                            h , w = idct["data"].shape[:2]
-                            xx = int(x0 + idct["x0"] * (x1 - x0))
-                            yy = int(y0 + idct["y0"] * (x1 - x0))
-                            ww = int(idct["w"] * (x1 - x0))
-                            hh = int(idct["h"] * (x1 - x0))
-                            data_ = cv2.resize(idct["data"], (ww, hh))
-                            data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(numpy.uint8)
-                            impil = PIL.Image.fromarray(data_ , mode = "RGB")
-                            bkg.append((impil , xx , self._frame_preview_height * self._antialias - yy - hh))
-
                     if additional is not None and "frames" in additional:
 
                         all_frames = additional["frames"]
@@ -303,15 +280,13 @@ class RecordClient:
                                                             mode = "RGBA" , 
                                                             size = (self._frame_preview_width * self._antialias , self._frame_preview_height * self._antialias) , 
                                                             color = (r , b , g , a))
-                                    for b in bkg:
-                                        impil , xx , yy = b
-                                        frame_pil.paste(impil , (xx , yy))
                                     frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                                     draw.pil_draw_shapes(
+                                            frame_pil ,
                                             frame_pil_draw ,
                                             frame ,
                                             self._get_rectangle(
-                                                size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)))
+                                                size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)) , background = (r , g , b))
                                     if self._antialias != 1:
                                         frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
                                     video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
@@ -356,51 +331,10 @@ class RecordClient:
                                 )
 
                         all_recordings = []
-                        bkg = []
                         i_frame = 1
                         i_printout = 1
                         for aa in all_additional:
                             logger.debug("new additional")
-                            if "background" in aa:
-                                self._set_colors(self._dark_pallete)
-                                r , b , g  = self._paper_color
-                                a = 255
-
-                                bkg = []
-                                bb = aa["background"]
-                                x0 , y0 = 0 , 0
-                                x1 , y1 = self._frame_preview_width * self._antialias , self._frame_preview_height * self._antialias
-                                for idct in bb:
-                                    h , w = idct["data"].shape[:2]
-                                    xx = int(x0 + idct["x0"] * (x1 - x0))
-                                    yy = int(y0 + idct["y0"] * (x1 - x0))
-                                    ww = int(idct["w"] * (x1 - x0))
-                                    hh = int(idct["h"] * (x1 - x0))
-                                    data_ = cv2.resize(idct["data"], (ww, hh))
-                                    data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(numpy.uint8)
-                                    impil = PIL.Image.fromarray(data_ , mode = "RGB")
-                                    bkg.append((impil , xx , self._frame_preview_height * self._antialias - yy - hh))
-
-
-                                frame_pil = PIL.Image.new(
-                                                        mode = "RGBA" , 
-                                                        size = (self._frame_preview_width * self._antialias , self._frame_preview_height * self._antialias) , 
-                                                        color = (r , b , g , a))
-
-                                for impil , xx , yy in bkg:
-                                    frame_pil.paste(impil , (xx , yy))
-
-                                if self._antialias != 1:
-                                    frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
-                                
-                                #logger.debug("writing background " + str(self._background_pause))
-                                #for _ in range(self._background_pause):
-                                #    video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
-
-                                #rec = numpy.zeros(
-                                #        (int(self._samplerate * self._background_pause / self._frame_rate) , self._channels) , 
-                                #        dtype = self._dtype)
-                                #all_recordings.append(rec)
                             if "frames" in aa:
                                 self._set_colors(self._dark_pallete)
                                 frames = aa["frames"]
@@ -414,15 +348,13 @@ class RecordClient:
                                                             mode = "RGBA" , 
                                                             size = (self._frame_preview_width * self._antialias , self._frame_preview_height * self._antialias) , 
                                                             color = (r , b , g , a))
-                                    for b in bkg:
-                                        impil , xx , yy = b
-                                        frame_pil.paste(impil , (xx , yy))
                                     frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                                     draw.pil_draw_shapes(
+                                            frame_pil ,
                                             frame_pil_draw ,
                                             frame ,
                                             self._get_rectangle(
-                                                size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)))
+                                                size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)) , background = (r , g , b))
                                     if self._antialias != 1:
                                         frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
                                     video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
@@ -441,16 +373,14 @@ class RecordClient:
                                                         color = (r , b , g , a))
                                 frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                                 draw.pil_draw_shapes(
+                                        frame_pil ,
                                         frame_pil_draw ,
                                         frame ,
                                         self._get_rectangle(
-                                            size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)))
+                                            size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)) , background = (r , g , b))
                                 if self._antialias != 1:
                                     logger.debug("frame_pil.resize(...)")
                                     frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
-                                for b in bkg:
-                                    impil , xx , yy = b
-                                    frame_pil.paste(impil , (xx , yy))
                                 logger.debug(self._printout)
                                 logger.debug(str(i_printout))
                                 path = os.path.join(self._printout , str(i_printout) + ".png")
@@ -460,7 +390,6 @@ class RecordClient:
                                 i_printout += 1
                             if "recording" in aa:
                                 all_recordings.append(aa["recording"])
-                            bkg = []
 
                         all_recordings = numpy.concatenate(all_recordings)
                         with wave.open(self._audiopath, 'wb') as wf:
@@ -476,6 +405,7 @@ class RecordClient:
                         video.release()
                     self._status = None
                     self._antialias = self._configuration["frames"].getint("antialias")
+                    self._set_colors(self._dark_pallete)
 
                 elif symbol == pyglet.window.key.S:
                     all_additional = self._record.get_all_additional()
@@ -497,26 +427,9 @@ class RecordClient:
                                 )
 
                         all_recordings = []
-                        bkg = []
                         i_frame = 1
                         i_printout = 1
                         for aa in all_additional:
-                            if "background" in aa:
-                                self._set_colors(self._dark_pallete)
-                                bkg = []
-                                bb = aa["background"]
-                                x0 , y0 = 0 , 0
-                                x1 , y1 = self._frame_width * self._antialias , self._frame_height * self._antialias
-                                for idct in bb:
-                                    h , w = idct["data"].shape[:2]
-                                    xx = int(x0 + idct["x0"] * (x1 - x0))
-                                    yy = int(y0 + idct["y0"] * (x1 - x0))
-                                    ww = int(idct["w"] * (x1 - x0))
-                                    hh = int(idct["h"] * (x1 - x0))
-                                    data_ = cv2.resize(idct["data"], (ww, hh))
-                                    data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(numpy.uint8)
-                                    impil = PIL.Image.fromarray(data_ , mode = "RGB")
-                                    bkg.append((impil , xx , self._frame_height * self._antialias - yy - hh))
                             if "frames" in aa:
                                 self._set_colors(self._dark_pallete)
                                 frames = aa["frames"]
@@ -530,15 +443,13 @@ class RecordClient:
                                                             mode = "RGBA" , 
                                                             size = (self._frame_width * self._antialias , self._frame_height * self._antialias) , 
                                                             color = (r , b , g , a))
-                                    for b in bkg:
-                                        impil , xx , yy = b
-                                        frame_pil.paste(impil , (xx , yy))
                                     frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                                     draw.pil_draw_shapes(
+                                            frame_pil ,
                                             frame_pil_draw ,
                                             frame ,
                                             self._get_rectangle(
-                                                size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
+                                                size = (self._antialias * self._frame_width , self._antialias * self._frame_height)) , background = (r , g , b))
                                     if self._antialias != 1:
                                         frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
                                     video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
@@ -557,16 +468,14 @@ class RecordClient:
                                                         color = (r , b , g , a))
                                 frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                                 draw.pil_draw_shapes(
+                                        frame_pil ,
                                         frame_pil_draw ,
                                         frame ,
                                         self._get_rectangle(
-                                            size = (self._antialias * self._frame_width , self._antialias * self._frame_height)))
+                                            size = (self._antialias * self._frame_width , self._antialias * self._frame_height)) , background = (r , g , b))
                                 if self._antialias != 1:
                                     logger.debug("frame_pil.resize(...)")
                                     frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
-                                for b in bkg:
-                                    impil , xx , yy = b
-                                    frame_pil.paste(impil , (xx , yy))
                                 logger.debug(self._printout)
                                 logger.debug(str(i_printout))
                                 path = os.path.join(self._printout , str(i_printout) + ".png")
@@ -576,7 +485,6 @@ class RecordClient:
                                 i_printout += 1
                             if "recording" in aa:
                                 all_recordings.append(aa["recording"])
-                            bkg = []
 
                         all_recordings = numpy.concatenate(all_recordings)
                         with wave.open(self._audiopath, 'wb') as wf:
@@ -591,6 +499,7 @@ class RecordClient:
                     finally:
                         video.release()
                     self._status = None
+                    self._set_colors(self._dark_pallete)
                     
                 elif symbol == pyglet.window.key.G:
                     if not self._record_sound:

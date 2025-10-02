@@ -11,6 +11,8 @@ from state import State
 class Record:
     def __init__(self , configuration , dark_pallete = "default_pallete" , light_pallete = "default_pallete"):
 
+        logger.debug("__init__")
+
         self._unique = 0
 
         self._stroke = []
@@ -270,7 +272,7 @@ class Record:
                                     [addx + x , addy + y , p , t , style] 
                                     for x , y , p , t , style in pts]
 
-                        new_stack.append(self.add_full_stroke(newpts))
+                        new_stack.append(self._add_full_stroke(newpts))
                     else:
                         new_stack.append(s)
                 else:
@@ -319,7 +321,7 @@ class Record:
                                     [addx + (x - minx) , addy + (y - miny) , p , t , style] 
                                     for x , y , p , t , style in pts]
 
-                        new_stack.append(self.add_full_stroke(newpts))
+                        new_stack.append(self._add_full_stroke(newpts))
                     else:
                         new_stack.append(s)
                 else:
@@ -349,8 +351,6 @@ class Record:
         logger.debug(before)
         logger.debug(after)
 
-        background = [self._images[s] for s in strokes if s in self._images]
-        
         frames_before = []
         for i in range(len(before)):
             s = before[i]
@@ -364,6 +364,10 @@ class Record:
                                                                 "color" : (int(red) , int(green) , int(blue)) ,
                                                                 "opacity" : int(opacity)
                                                                 })
+                frames_before += shapes_list
+            elif s in self._images:
+                img = self._images[s]
+                shapes_list = [img]
                 frames_before += shapes_list
 
         rec = [self._recordings[s] for s in after if s in self._recordings]
@@ -387,6 +391,10 @@ class Record:
                                                                     "opacity" : int(opacity)
                                                                     })
                     start += shapes_list
+                elif s in self._images:
+                    img = self._images[s]
+                    shapes_list = [img]
+                    start += shapes_list
 
             if after[istroke] in self._strokes:
                 pts = self._strokes[after[istroke]]
@@ -401,12 +409,25 @@ class Record:
                                                                     "opacity" : int(opacity)
                                                                     })
                     frames.append(frames_before + start + shapes_list_part)
+            elif after[istroke] in self._images:
+                im = self._images[after[istroke]]
+                for i in range(2 * self._pause + 1):
+                    t = float(i) / (2 * self._pause)
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : im["x0"] ,
+                             "y0" : im["y0"] ,
+                             "w" : im["w"] ,
+                             "h" : im["h"] ,
+                             "opacity" : t}
+                    frames.append(frames_before + start + [newim])
             elif after[istroke] == "pause":
                 for _ in range(self._pause):
                     frames.append(frames_before + start)        
 
         frames , reco = self._make_equalish_time(frames , reco)
-        return State(strokes , {'frames' : frames , 'recording' : reco , 'background' : background})
+        return State(strokes , {'frames' : frames , 'recording' : reco})
 
     def _drawshort(self , state):
         strokes = self.get_current_stack()
@@ -430,8 +451,6 @@ class Record:
         logger.debug("before : " + str(before))
         logger.debug("after : " + str(after))
 
-        background = [self._images[s] for s in strokes if s in self._images]
-
         frames_before = []
         for i in range(len(before)):
             s = before[i]
@@ -445,6 +464,10 @@ class Record:
                                                                 "color" : (int(red) , int(green) , int(blue)) ,
                                                                 "opacity" : int(opacity)
                                                                 })
+                frames_before += shapes_list
+            elif s in self._images:
+                img = self._images[s]
+                shapes_list = [img]
                 frames_before += shapes_list
 
         rec = [self._recordings[s] for s in after if s in self._recordings]
@@ -469,6 +492,10 @@ class Record:
                                                                     "opacity" : int(opacity)
                                                                     })
                     start += shapes_list
+                elif s in self._images:
+                    img = self._images[s]
+                    shapes_list = [img]
+                    start += shapes_list
 
             if after[istroke] in self._strokes:
                 pts = self._strokes[after[istroke]]
@@ -483,6 +510,20 @@ class Record:
                                                                     "opacity" : int(opacity)
                                                                     })
                     frames.append(frames_before + start + shapes_list_part)
+            elif after[istroke] in self._images:
+                im = self._images[after[istroke]]
+                for i in range(2 * self._pause + 1):
+                    t = float(i) / (2 * self._pause)
+                    logger.debug(str(t))
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : im["x0"] ,
+                             "y0" : im["y0"] ,
+                             "w" : im["w"] ,
+                             "h" : im["h"] ,
+                             "opacity" : t}
+                    frames.append(frames_before + start + [newim])
             elif after[istroke] == "pause":
                 for _ in range(self._pause):
                     frames.append(frames_before + start)
@@ -506,51 +547,51 @@ class Record:
                                                                     "opacity" : int(opacity)
                                                                     })
                     f += frames_before + shapes_list_part
+                elif s in self._images:
+                    im = self._images[s]
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : im["x0"] ,
+                             "y0" : im["y0"] ,
+                             "w" : im["w"] ,
+                             "h" : im["h"] ,
+                             "opacity" : t}
+                    f += frames_before + [newim]
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , reco)
-        return State(before , {'frames' : frames , 'recording' : reco , 'background' : background})
+        return State(before , {'frames' : frames , 'recording' : reco})
 
     def _printout(self , state):
         stack = self.get_current_stack()
         stack.pop()
 
-        background = [self._images[s] for s in stack if s in self._images]
-        
-        strokes = []
-        
+        frame = []
         for s in stack:
             if s in self._strokes:
-                strokes.append(s)
-        
-        frame = []
-        for s in strokes:
-            pts = self._strokes[s]
-            color = int(pts[0][4]) # todo, instead of parameters
-            thickness , red , green , blue , opacity = self._light_colors[color]
-            shapes_list_part = draw.simple_stroke_shapes(pts , 
-                                                    parameters = {
-                                                           "thickness" : thickness , 
-                                                            "color" : (
-                                                                int(red) , 
-                                                                int(green) , 
-                                                                int(blue)) ,
-                                                            "opacity" : int(opacity)
-                                                            })
-            frame += shapes_list_part
+                pts = self._strokes[s]
+                color = int(pts[0][4]) # todo, instead of parameters
+                thickness , red , green , blue , opacity = self._light_colors[color]
+                shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                        parameters = {
+                                                               "thickness" : thickness , 
+                                                                "color" : (
+                                                                    int(red) , 
+                                                                    int(green) , 
+                                                                    int(blue)) ,
+                                                                "opacity" : int(opacity)
+                                                                })
+                frame += shapes_list_part
+            elif s in self._images:
+                img = self._images[s]
+                shapes_list = [img]
+                frame += shapes_list
 
-        return State(stack , {"printout" : frame , "background" : background})
+        return State(stack , {"printout" : frame})
 
     def _show(self , state):
-        stack = self.get_current_stack()
-
-        background = [self._images[s] for s in stack if s in self._images]
-        
-        strokes = []
-
-        for s in stack:
-            if s in self._strokes:
-                strokes.append(s)
+        strokes = self.get_current_stack()
 
         br , bg , bb = self._dark_paper_color
 
@@ -560,22 +601,34 @@ class Record:
             t = float(i) / (2 * self._pause)
             f = []
             for s in strokes:
-                pts = self._strokes[s]
-                color = int(pts[0][4]) # todo, instead of parameters
-                thickness , red , green , blue , opacity = self._dark_colors[color]
-                shapes_list_part = draw.simple_stroke_shapes(pts , 
-                                                        parameters = {
-                                                               "thickness" : thickness , 
-                                                                "color" : (
-                                                                    int(t * red + (1.0 - t) * br) , 
-                                                                    int(t * green + (1.0 - t) * bg) , 
-                                                                    int(t * blue + (1.0 - t) * bb)) ,
-                                                                "opacity" : int(opacity)
-                                                                })
-                f += shapes_list_part
+                if s in self._strokes:
+                    pts = self._strokes[s]
+                    color = int(pts[0][4]) # todo, instead of parameters
+                    thickness , red , green , blue , opacity = self._dark_colors[color]
+                    shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                            parameters = {
+                                                                   "thickness" : thickness , 
+                                                                    "color" : (
+                                                                        int(t * red + (1.0 - t) * br) , 
+                                                                        int(t * green + (1.0 - t) * bg) , 
+                                                                        int(t * blue + (1.0 - t) * bb)) ,
+                                                                    "opacity" : int(opacity)
+                                                                    })
+                    f += shapes_list_part
+                elif s in self._images:
+                    im = self._images[s]
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : im["x0"] ,
+                             "y0" : im["y0"] ,
+                             "w" : im["w"] ,
+                             "h" : im["h"] ,
+                             "opacity" : t}
+                    f += [newim]
             frames.append(f)
         
-        rec = [self._recordings[s] for s in stack if s in self._recordings]
+        rec = [self._recordings[s] for s in strokes if s in self._recordings]
         reco = None
         if len(rec) > 0:
             reco = numpy.concatenate(rec)
@@ -585,34 +638,38 @@ class Record:
             t = float(i) / (2 * self._pause)
             f = []
             for s in strokes:
-                pts = self._strokes[s]
-                color = int(pts[0][4]) # todo, instead of parameters
-                thickness , red , green , blue , opacity = self._dark_colors[color]
-                shapes_list_part = draw.simple_stroke_shapes(pts , 
-                                                        parameters = {
-                                                               "thickness" : thickness , 
-                                                                "color" : (
-                                                                    int(t * red + (1.0 - t) * br) , 
-                                                                    int(t * green + (1.0 - t) * bg) , 
-                                                                    int(t * blue + (1.0 - t) * bb)) ,
-                                                                "opacity" : int(opacity)
-                                                                })
-                f += shapes_list_part
+                if s in self._strokes:
+                    pts = self._strokes[s]
+                    color = int(pts[0][4]) # todo, instead of parameters
+                    thickness , red , green , blue , opacity = self._dark_colors[color]
+                    shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                            parameters = {
+                                                                   "thickness" : thickness , 
+                                                                    "color" : (
+                                                                        int(t * red + (1.0 - t) * br) , 
+                                                                        int(t * green + (1.0 - t) * bg) , 
+                                                                        int(t * blue + (1.0 - t) * bb)) ,
+                                                                    "opacity" : int(opacity)
+                                                                    })
+                    f += shapes_list_part
+                elif s in self._images:
+                    im = self._images[s]
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : im["x0"] ,
+                             "y0" : im["y0"] ,
+                             "w" : im["w"] ,
+                             "h" : im["h"] ,
+                             "opacity" : t}
+                    f += [newim]
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , reco)
-        return State([] , {'frames' : frames , 'recording' : reco , 'background' : background})
+        return State([] , {'frames' : frames , 'recording' : reco})
  
     def _fadeout(self , state):
-        stack = self.get_current_stack()
-
-        background = [self._images[s] for s in stack if s in self._images]
-        
-        strokes = []
-
-        for s in stack:
-            if s in self._strokes:
-                strokes.append(s)
+        strokes = self.get_current_stack()
 
         br , bg , bb = self._dark_paper_color
 
@@ -622,35 +679,39 @@ class Record:
             t = float(i) / (2 * self._pause)
             f = []
             for s in strokes:
-                pts = self._strokes[s]
-                color = int(pts[0][4]) # todo, instead of parameters
-                thickness , red , green , blue , opacity = self._dark_colors[color]
-                shapes_list_part = draw.simple_stroke_shapes(pts , 
-                                                        parameters = {
-                                                               "thickness" : thickness , 
-                                                                "color" : (
-                                                                    int(t * red + (1.0 - t) * br) , 
-                                                                    int(t * green + (1.0 - t) * bg) , 
-                                                                    int(t * blue + (1.0 - t) * bb)) ,
-                                                                "opacity" : int(opacity)
-                                                                })
-                f += shapes_list_part
+                if s in self._strokes:
+                    pts = self._strokes[s]
+                    color = int(pts[0][4]) # todo, instead of parameters
+                    thickness , red , green , blue , opacity = self._dark_colors[color]
+                    shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                            parameters = {
+                                                                   "thickness" : thickness , 
+                                                                    "color" : (
+                                                                        int(t * red + (1.0 - t) * br) , 
+                                                                        int(t * green + (1.0 - t) * bg) , 
+                                                                        int(t * blue + (1.0 - t) * bb)) ,
+                                                                    "opacity" : int(opacity)
+                                                                    })
+                    f += shapes_list_part
+                elif s in self._images:
+                    im = self._images[s]
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : im["x0"] ,
+                             "y0" : im["y0"] ,
+                             "w" : im["w"] ,
+                             "h" : im["h"] ,
+                             "opacity" : t}
+                    f += [newim]
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , None)
-        return State([] , {'frames' : frames , 'recording' : reco , 'background' : background})
+        return State([] , {'frames' : frames , 'recording' : reco})
 
     def _fadein(self , state):
-        stack = self.get_current_stack()
-        stack.pop()
-
-        background = [self._images[s] for s in stack if s in self._images]
-        
-        strokes = []
-
-        for s in stack:
-            if s in self._strokes:
-                strokes.append(s)
+        strokes = self.get_current_stack()
+        strokes.pop()
 
         br , bg , bb = self._dark_paper_color
 
@@ -660,23 +721,35 @@ class Record:
             t = float(i) / (2 * self._pause)
             f = []
             for s in strokes:
-                pts = self._strokes[s]
-                color = int(pts[0][4]) # todo, instead of parameters
-                thickness , red , green , blue , opacity = self._dark_colors[color]
-                shapes_list_part = draw.simple_stroke_shapes(pts , 
-                                                        parameters = {
-                                                               "thickness" : thickness , 
-                                                                "color" : (
-                                                                    int(t * red + (1.0 - t) * br) , 
-                                                                    int(t * green + (1.0 - t) * bg) , 
-                                                                    int(t * blue + (1.0 - t) * bb)) ,
-                                                                "opacity" : int(opacity)
-                                                                })
-                f += shapes_list_part
+                if s in self._strokes:
+                    pts = self._strokes[s]
+                    color = int(pts[0][4]) # todo, instead of parameters
+                    thickness , red , green , blue , opacity = self._dark_colors[color]
+                    shapes_list_part = draw.simple_stroke_shapes(pts , 
+                                                            parameters = {
+                                                                   "thickness" : thickness , 
+                                                                    "color" : (
+                                                                        int(t * red + (1.0 - t) * br) , 
+                                                                        int(t * green + (1.0 - t) * bg) , 
+                                                                        int(t * blue + (1.0 - t) * bb)) ,
+                                                                    "opacity" : int(opacity)
+                                                                    })
+                    f += shapes_list_part
+                elif s in self._images:
+                    im = self._images[s]
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
+                             "ar" : im["ar"] , 
+                             "x0" : im["x0"] ,
+                             "y0" : im["y0"] ,
+                             "w" : im["w"] ,
+                             "h" : im["h"] ,
+                             "opacity" : t}
+                    f += [newim]
             frames.append(f)
 
         frames , reco = self._make_equalish_time(frames , None)
-        return State(stack , {'frames' : frames , 'recording' : reco , 'background' : background})
+        return State(strokes , {'frames' : frames , 'recording' : reco})
     
     def _iposition(self , state):
         strokes = self.get_current_stack()
@@ -714,14 +787,16 @@ class Record:
                 if s in self._images:
                     im = self._images[s]
 
-                    newim = {"data" : im["data"] , 
+                    newim = {"type" : "image" ,
+                             "data" : im["data"] , 
                              "ar" : im["ar"] , 
                              "x0" : xcoord - 0.5 * im["w"] * scale ,
                              "y0" : ycoord - 0.5 * im["h"] * scale ,
                              "w" : im["w"] * scale ,
-                             "h" : im["h"] * scale}
+                             "h" : im["h"] * scale ,
+                             "opacity" : im["opacity"]}
 
-                    new_stack.append(self.add_full_image(newim))
+                    new_stack.append(self._add_full_image(newim))
                 else:
                     new_stack.append(s)
             else:
@@ -729,9 +804,9 @@ class Record:
 
         return State(new_stack , None)
 
-    # for interacting
+    #
 
-    def add_full_stroke(self , points):
+    def _add_full_stroke(self , points):
 
         pts = copy.deepcopy(points)
 
@@ -744,7 +819,7 @@ class Record:
 
         return name
 
-    def add_full_image(self , image):
+    def _add_full_image(self , image):
 
         name = "i_" + str(self._unique)
         self._unique += 1
@@ -754,6 +829,8 @@ class Record:
         self._images[name] = image
 
         return name
+
+    # for interacting
 
     def add_sound(self , sound):
 
@@ -807,14 +884,24 @@ class Record:
                 h = 1.0 / self._ar
                 x0 = 0.5 - 0.5 * w
                 y0 = 0.0
-                self._images[name] = {"data" : img , "ar" : ar , 'x0' : x0 , 'y0' : y0 , 'w' : w , 'h' : h}
+                self._images[name] = {"type" : "image" , 
+                                      "data" : img , 
+                                      "ar" : ar , 
+                                      'x0' : x0 , 'y0' : y0 , 
+                                      'w' : w , 'h' : h ,
+                                      "opacity" : 1.0}
             else:
                 # fit width
                 w = 1.0
                 h = 1.0 / ar
                 x0 = 0.0
                 y0 = 0.5 - 0.5 * h
-                self._images[name] = {"data" : img , "ar" : ar , 'x0' : x0 , 'y0' : y0 , 'w' : w , 'h' : h}
+                self._images[name] = {"type" : "image" , 
+                                      "data" : img , 
+                                      "ar" : ar , 
+                                      'x0' : x0 , 'y0' : y0 , 
+                                      'w' : w , 'h' : h ,
+                                      "opacity" : 1.0}
                     
             state = self._states[-1]
             new_state = state.add_to_program(name)
@@ -854,9 +941,6 @@ class Record:
             self._command = self._command[:-1]
         else:
             self._command += char
-
-#    def change_command(self , s):
-#        self._command = s
 
     def add_command(self , command):
         logger.debug("add_command(\"" + command + "\")")
@@ -902,7 +986,8 @@ class Record:
     
     def get_image(self , name):
         if name in self._images:
-            return copy.deepcopy(self._images[name])
+            #todo return copy.deepcopy(self._images[name])
+            return self._images[name]
         else:
             return None
 
@@ -913,23 +998,21 @@ class Record:
         state = self._states.pop()
         self._append(state)
 
-    def get_current_strokes(self , cursor = None):
-        stack = None
-        if cursor is None:
-            stack = self._states[-1].get_stack()
-        else:
-            stack = self._states[cursor % len(self._states)].get_stack()
-      
-        return [s for s in stack if s in self._strokes]
+    def get_type(self , s):
+        if s in self._strokes:
+            return "stroke"
+        if s in self._images:
+            return "image"
+        return None
 
-    def get_current_images(self , cursor = None):
+    def get_current_strokes_images(self , cursor = None):
         stack = None
         if cursor is None:
             stack = self._states[-1].get_stack()
         else:
             stack = self._states[cursor % len(self._states)].get_stack()
       
-        return [s for s in stack if s in self._images]
+        return [s for s in stack if (s in self._strokes) or (s in self._images)]
 
     def get_current_stack(self , cursor = None):
         stack = None

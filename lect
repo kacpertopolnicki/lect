@@ -51,7 +51,8 @@ if __name__ == "__main__":
         if args.save is not None:
             with open(args.save , "wb") as f:
                 pickle.dump(rec , f)
-
-        curses.echo()
+        
+        curses.reset_shell_mode()
+        #curses.echo()
         curses.endwin()
-        curses.nocbreak()
+        #curses.nocbreak()

@@ -5,6 +5,8 @@ import numpy as np
 import PIL
 from PIL import Image , ImageDraw
 
+import cv2
+
 import time
 
 from log import logger
@@ -13,7 +15,7 @@ ROT90 = np.array([[0.0 , -1.0] , [1.0 , 0.0]] , dtype = np.float64)
 
 # pyglet
 
-def pyglet_circle(x , y , r , geometry = None , shps = None , batch = None , color = None , opacity = None):
+def pyglet_circle(x , y , r , geometry = None , shps = None , batch = None , color = None , opacity = None , background = None):
     x0 , y0 , x1 , y1 = geometry
     cx = x0 + x * (x1 - x0)
     cy = y0 + y * (x1 - x0)
@@ -22,43 +24,61 @@ def pyglet_circle(x , y , r , geometry = None , shps = None , batch = None , col
     c.opacity = opacity
     shps.append(c)
 
-def pyglet_polygon(*pts , geometry = None , shps = None , batch = None , color = None , opacity = None):
+def pyglet_polygon(*pts , geometry = None , shps = None , batch = None , color = None , opacity = None , background = None):
     x0 , y0 , x1 , y1 = geometry
     points = [(x0 + x * (x1 - x0) , y0 + y * (x1 - x0)) for (x , y) in pts]
     p = shapes.Polygon(*points , color = color , batch = batch)
     p.opacity = opacity
     shps.append(p)
 
-def pyglet_multiline(*pts , geometry = None , shps = None , batch = None , color = None , opacity = None):
+def pyglet_multiline(*pts , geometry = None , shps = None , batch = None , color = None , opacity = None , background = None):
     x0 , y0 , x1 , y1 = geometry
     points = [(x0 + x * (x1 - x0) , y0 + y * (x1 - x0)) for (x , y) in pts]
     p = shapes.MultiLine(*points , color = color , batch = batch)
     p.opacity = opacity
     shps.append(p)
 
+def pyglet_image(data , x , y , w , h , geometry = None , shps = None , batch = None , opacity = None , background = None):
+    x0 , y0 , x1 , y1 = geometry
+    xx = int(x0 + x * (x1 - x0))
+    yy = int(y0 + y * (x1 - x0))
+    ww = int(w * (x1 - x0))
+    hh = int(h * (x1 - x0))
+
+    data_ = cv2.resize(data, (ww, hh))
+    data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(np.uint8).tobytes()
+
+    image = pyglet.image.ImageData(width = ww , height = hh , fmt = 'RGB' , data = data_ , pitch = -3 * ww)
+    sprite = pyglet.sprite.Sprite(img = image , x = xx , y = yy , batch = batch)
+
+    shps.append(sprite)
+
 def pyglet_draw_shapes(shapes_list , paperGeometry ,
-                shps = None , batch = None):
+                shps = None , batch = None , background = None):
     for s in shapes_list:
         fun = s["type"]
         if fun == "circle":
-            shape = pyglet_circle(*s["center"] , *[s["radius"]] , 
+            pyglet_circle(*s["center"] , *[s["radius"]] , 
                            color = s["color"] , 
                            opacity = s["opacity"] ,
-                           geometry = paperGeometry , batch = batch , shps = shps)
+                           geometry = paperGeometry , batch = batch , shps = shps , background = background)
         elif fun == "polygon":
-            shape = pyglet_polygon(*s["points"] , 
+            pyglet_polygon(*s["points"] , 
                            color = s["color"] , 
                            opacity = s["opacity"] ,
-                           geometry = paperGeometry , batch = batch , shps = shps)
+                           geometry = paperGeometry , batch = batch , shps = shps , background = background)
         elif fun == "multiline":
-            shape = pyglet_multiline(*s["points"] , 
+            pyglet_multiline(*s["points"] , 
                            color = s["color"] , 
                            opacity = s["opacity"] ,
-                           geometry = paperGeometry , batch = batch , shps = shps)
+                           geometry = paperGeometry , batch = batch , shps = shps , background = background)
+        elif fun == "image":
+            pyglet_image(s["data"] , s["x0"] , s["y0"] , s["w"] , s["h"] , 
+                           geometry = paperGeometry , batch = batch , shps = shps , opacity = s["opacity"] , background = background)
 
 # pil
 
-def pil_circle(draw , x , y , r , geometry = None , color = None , opacity = None):
+def pil_circle(image , draw , x , y , r , geometry = None , color = None , opacity = None , background = None):
     x0 , y0 , x1 , y1 = geometry
     cx = x0 + x * (x1 - x0)
     cy = y1 - y * (x1 - x0)
@@ -67,26 +87,53 @@ def pil_circle(draw , x , y , r , geometry = None , color = None , opacity = Non
     a = opacity
     draw.circle((cx , cy) , rad , fill = (r , b , g , a) , outline = (0 , 0 , 0 , 0) , width = 0)
 
-def pil_polygon(draw , *pts , geometry = None , color = None , opacity = None):
+def pil_polygon(image , draw , *pts , geometry = None , color = None , opacity = None , background = None):
     x0 , y0 , x1 , y1 = geometry
     points = [(x0 + x * (x1 - x0) , y1 - y * (x1 - x0)) for (x , y) in pts]
     r , b , g = color
     a = opacity
     draw.polygon(points , fill = (r , b , g , a) , outline = (0 , 0 , 0 , 0) , width = 0)
 
-def pil_draw_shapes(draw , shapes_list , paperGeometry):
+def pil_image(image , draw , data , x , y , w , h , geometry = None , opacity = None , background = None):
+    x0 , y0 , x1 , y1 = geometry
+    xx = int(x0 + x * (x1 - x0))
+    yy = int(y0 + y * (x1 - x0))
+    ww = int(w * (x1 - x0))
+    hh = int(h * (x1 - x0))
+
+    data_ = cv2.resize(data, (ww, hh))
+    data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(np.uint8)
+    if opacity is not None and background is not None:
+        r , g , b = background
+        data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB)
+        data_[: , : , 0] = data_[: , : , 0] * opacity + r * (1 - opacity) 
+        data_[: , : , 1] = data_[: , : , 1] * opacity + g * (1 - opacity) 
+        data_[: , : , 2] = data_[: , : , 2] * opacity + b * (1 - opacity) 
+        data_ = data_.astype(np.uint8)
+    else:
+        data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(np.uint8)
+
+    impil = PIL.Image.fromarray(data_ , mode = "RGB")
+
+    width , height = image.size
+    image.paste(impil , (xx , height - yy - hh))
+
+def pil_draw_shapes(image , draw , shapes_list , paperGeometry , background = None):
     for s in shapes_list:
         fun = s["type"]
         if fun == "circle":
-            shape = pil_circle(draw , *s["center"] , *[s["radius"]] , 
+            pil_circle(image , draw , *s["center"] , *[s["radius"]] , 
                            color = s["color"] , 
                            opacity = s["opacity"] ,
-                           geometry = paperGeometry)
+                           geometry = paperGeometry , background = background)
         elif fun == "polygon":
-            shape = pil_polygon(draw , *s["points"] , 
+            pil_polygon(image , draw , *s["points"] , 
                            color = s["color"] , 
                            opacity = s["opacity"] ,
-                           geometry = paperGeometry)
+                           geometry = paperGeometry , background = background)
+        elif fun == "image":
+            pil_image(image , draw , s["data"] , s["x0"] , s["y0"] , s["w"] , s["h"] , 
+                           geometry = paperGeometry , opacity = s["opacity"] , background = background)
 # for drawing strokes
 
 def simple_stroke_shapes(pts , parameters = None):
