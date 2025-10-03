@@ -41,9 +41,8 @@ class RecordClient:
         self._printout = None
         if printout is not None and (os.path.isdir(printout) or os.path.isfile(printout)):
             raise ValueError("Printout directory exists.")
-        if printout is not None:
+        elif printout is not None:
             self._printout = printout
-            os.mkdir(self._printout)
 
         # RECORD
 
@@ -360,34 +359,37 @@ class RecordClient:
                                     video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
                                     i_frame += 1
                             if "printout" in aa:
-                                self._set_colors(self._light_pallete)
-                                self._status = "Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + "."
-                                self._update_curses_screen()
-                                logger.info("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
-                                frame = aa["printout"]
-                                r , b , g  = self._paper_color
-                                a = 255
-                                frame_pil = PIL.Image.new(
-                                                        mode = "RGBA" , 
-                                                        size = (self._frame_preview_width * self._antialias , self._frame_preview_height * self._antialias) , 
-                                                        color = (r , b , g , a))
-                                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
-                                draw.pil_draw_shapes(
-                                        frame_pil ,
-                                        frame_pil_draw ,
-                                        frame ,
-                                        self._get_rectangle(
-                                            size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)) , background = (r , g , b))
-                                if self._antialias != 1:
-                                    logger.debug("frame_pil.resize(...)")
-                                    frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
-                                logger.debug(self._printout)
-                                logger.debug(str(i_printout))
-                                path = os.path.join(self._printout , str(i_printout) + ".png")
-                                logger.debug("path : " + str(path))
-                                logger.debug("frame_pil : " + str(frame_pil))
-                                frame_pil.save(path)
-                                i_printout += 1
+                                if self._printout is not None:
+                                    if not os.path.isdir(self._printout):
+                                        os.mkdir(self._printout)
+                                    self._set_colors(self._light_pallete)
+                                    self._status = "Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + "."
+                                    self._update_curses_screen()
+                                    logger.info("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
+                                    frame = aa["printout"]
+                                    r , b , g  = self._paper_color
+                                    a = 255
+                                    frame_pil = PIL.Image.new(
+                                                            mode = "RGBA" , 
+                                                            size = (self._frame_preview_width * self._antialias , self._frame_preview_height * self._antialias) , 
+                                                            color = (r , b , g , a))
+                                    frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                    draw.pil_draw_shapes(
+                                            frame_pil ,
+                                            frame_pil_draw ,
+                                            frame ,
+                                            self._get_rectangle(
+                                                size = (self._antialias * self._frame_preview_width , self._antialias * self._frame_preview_height)) , background = (r , g , b))
+                                    if self._antialias != 1:
+                                        logger.debug("frame_pil.resize(...)")
+                                        frame_pil = frame_pil.resize((self._frame_preview_width , self._frame_preview_height) , resample = PIL.Image.LANCZOS)
+                                    logger.debug(self._printout)
+                                    logger.debug(str(i_printout))
+                                    path = os.path.join(self._printout , str(i_printout) + ".png")
+                                    logger.debug("path : " + str(path))
+                                    logger.debug("frame_pil : " + str(frame_pil))
+                                    frame_pil.save(path)
+                                    i_printout += 1
                             if "recording" in aa:
                                 all_recordings.append(aa["recording"])
 
@@ -455,34 +457,37 @@ class RecordClient:
                                     video.write(cv2.cvtColor(numpy.array(frame_pil) , cv2.COLOR_RGB2BGR))
                                     i_frame += 1
                             if "printout" in aa:
-                                self._set_colors(self._light_pallete)
-                                self._status = "Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + "."
-                                self._update_curses_screen()
-                                logger.info("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
-                                frame = aa["printout"]
-                                r , b , g  = self._paper_color
-                                a = 255
-                                frame_pil = PIL.Image.new(
-                                                        mode = "RGBA" , 
-                                                        size = (self._frame_width * self._antialias , self._frame_height * self._antialias) , 
-                                                        color = (r , b , g , a))
-                                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
-                                draw.pil_draw_shapes(
-                                        frame_pil ,
-                                        frame_pil_draw ,
-                                        frame ,
-                                        self._get_rectangle(
-                                            size = (self._antialias * self._frame_width , self._antialias * self._frame_height)) , background = (r , g , b))
-                                if self._antialias != 1:
-                                    logger.debug("frame_pil.resize(...)")
-                                    frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
-                                logger.debug(self._printout)
-                                logger.debug(str(i_printout))
-                                path = os.path.join(self._printout , str(i_printout) + ".png")
-                                logger.debug("path : " + str(path))
-                                logger.debug("frame_pil : " + str(frame_pil))
-                                frame_pil.save(path)
-                                i_printout += 1
+                                if self._printout is not None:
+                                    if not os.path.isdir(self._printout):
+                                        os.mkdir(self._printout)
+                                    self._set_colors(self._light_pallete)
+                                    self._status = "Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + "."
+                                    self._update_curses_screen()
+                                    logger.info("Calculating printout frame " + str(i_printout) + " / " + str(len_all_printout) + ".")
+                                    frame = aa["printout"]
+                                    r , b , g  = self._paper_color
+                                    a = 255
+                                    frame_pil = PIL.Image.new(
+                                                            mode = "RGBA" , 
+                                                            size = (self._frame_width * self._antialias , self._frame_height * self._antialias) , 
+                                                            color = (r , b , g , a))
+                                    frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                                    draw.pil_draw_shapes(
+                                            frame_pil ,
+                                            frame_pil_draw ,
+                                            frame ,
+                                            self._get_rectangle(
+                                                size = (self._antialias * self._frame_width , self._antialias * self._frame_height)) , background = (r , g , b))
+                                    if self._antialias != 1:
+                                        logger.debug("frame_pil.resize(...)")
+                                        frame_pil = frame_pil.resize((self._frame_width , self._frame_height) , resample = PIL.Image.LANCZOS)
+                                    logger.debug(self._printout)
+                                    logger.debug(str(i_printout))
+                                    path = os.path.join(self._printout , str(i_printout) + ".png")
+                                    logger.debug("path : " + str(path))
+                                    logger.debug("frame_pil : " + str(frame_pil))
+                                    frame_pil.save(path)
+                                    i_printout += 1
                             if "recording" in aa:
                                 all_recordings.append(aa["recording"])
 
