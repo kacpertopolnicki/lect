@@ -9,12 +9,14 @@ efficient and *lect* is a modern take on this approach.
 
 # todo
 
-- _center , _draw ... to take stack and return state
-- ctrl-s ctrl-a parallel
-- add documentation
-- setup code structure for pip
-- add tutorial to README.md
-- configure key shortcuts in config file
-- remove most calls to logger.debug
-- read todos in code
-- fade in and fade out of background
+1) add tests
+2) strengthen immutability of State
+   - verify that they don't change (images are not copied, 
+     can you make a numpy array immutable?)
+3) make the code after ctrl-s ctrl-a parallel
+4) add documentation
+5) setup code structure for pip
+6) add tutorial to README.md
+7) configure key shortcuts in config file
+9) remove most calls to logger.debug
+10) read todos in code

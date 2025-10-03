@@ -241,9 +241,12 @@ class RecordClient:
                     if len(self._commands_after) > 0:
                         for i in range(len(self._commands_after)):
                             command = self._commands_after[i]
+                            self._status = "Executing command : " + command
+                            self._update_curses_screen()
                             self._record.add_command(command)
                     self._commands_after = []
                     self._commands_after_index = 0
+                    self._status = None
                 elif symbol == pyglet.window.key.P:
                     logger.debug("calculating preview")
 

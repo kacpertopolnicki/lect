@@ -9,6 +9,7 @@ class State:
     def __init__(self , stack , additional = None , command = None):
         self._stack = copy.deepcopy(stack)
         if additional is not None:
+            # sauce : https://stackoverflow.com/questions/19500530/compress-python-object-in-memory
             self._additional = zlib.compress(pickle.dumps(additional))
         else:
             self._additional = None
