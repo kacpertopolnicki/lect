@@ -6,53 +6,76 @@ import record
 import recordclient
 import pickle
 import argparse
+import sys
 import curses
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog = "lect")
     parser.add_argument("animation" , help = "Path to output file for animation.")
     parser.add_argument("audio" , help = "Path to file to save audio data.")
+    parser.add_argument("-r" , "--run" , help = "Calculate and save the output without gui." , action = "store_true")
     parser.add_argument("-l" , "--load" , help = "Path to file with saved lect data.")
     parser.add_argument("-s" , "--save" , help = "Path to file to save lect data.")
     parser.add_argument("-p" , "--printout" , help = "Path to directory for printout." , default = None)
     parser.add_argument("-c" , "--config" , help = "Path to configuration file." , default = None)
     args = parser.parse_args()
 
-    rec = None
+    LECT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-    if args.load is not None:
-        with open(args.load , "rb") as f:
-            rec = pickle.load(f)
+    if args.run:
+        rec = None
 
-    else:
+        if args.load is not None:
+            with open(args.load , "rb") as f:
+                rec = pickle.load(f)
+        else:
+            sys.stderr.write("No file to load record.\n")
+            sys.exit(1)
 
-        LECT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+        if args.printout is None:
+            sys.stderr.write("No printout file.\n")
+            sys.exit(1)
 
-        config = configparser.ConfigParser()
-        config.read(os.path.join(LECT_DIRECTORY , "config"))
-        if args.config is not None:
-            config.read(args.config)
-
-        rec = record.Record(config ,
-                            dark_pallete = "default_pallete" ,
-                            light_pallete = "light_pallete")
-
-    try:
         record_client = recordclient.RecordClient(args.animation , args.audio , rec ,
+                                                  gui = False ,
                                                   dark_pallete = "default_pallete" ,
                                                   light_pallete = "light_pallete" ,
-                                                  printout = args.printout , pickle_path = args.save)
-        record_client.run()
+                                                  printout = args.printout)
 
-    finally:
+        record_client.calculate_save()
 
-        record_client.clean()
+    else:
+        rec = None
 
-        if args.save is not None:
-            with open(args.save , "wb") as f:
-                pickle.dump(rec , f)
-        
+        if args.load is not None:
+            with open(args.load , "rb") as f:
+                rec = pickle.load(f)
+
+        else:
+
+            config = configparser.ConfigParser()
+            config.read(os.path.join(LECT_DIRECTORY , "config"))
+            if args.config is not None:
+                config.read(args.config)
+
+            rec = record.Record(config ,
+                                dark_pallete = "default_pallete" ,
+                                light_pallete = "light_pallete")
+
+        try:
+            record_client = recordclient.RecordClient(args.animation , args.audio , rec ,
+                                                      dark_pallete = "default_pallete" ,
+                                                      light_pallete = "light_pallete" ,
+                                                      printout = args.printout , pickle_path = args.save)
+            record_client.run()
+
+        finally:
+
+            record_client.clean()
+
+            if args.save is not None:
+                with open(args.save , "wb") as f:
+                    pickle.dump(rec , f)
+            
         curses.reset_shell_mode()
-        #curses.echo()
         curses.endwin()
-        #curses.nocbreak()
