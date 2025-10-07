@@ -60,3 +60,52 @@ sample_rate = 44100
 channels = 1
 fade = 0.05
 sound_preview_command = mpv
+
+[ctrlkeys]
+
+# carefull:
+# numbers and lating characters
+# currently match pyglet key numbers
+# but this can change
+
+# preview audio ising sound_preview_command
+preview_audio = o
+
+# preview_video using preview_command
+preview_video = p
+
+# save low resolution
+preview_save = a
+
+# save high resolution
+save = s
+
+# start / end recording sound
+sound_record = g
+
+# write pickle
+write_pickle = w
+
+# paste image
+paste_image = i
+
+# move cursor down
+cursor_down = j
+
+# move cursor up
+cursor_up = k
+
+# move cursor down 10
+cursor_down_10 = h
+
+# move cursor up 10
+cursor_up_10 = l
+
+# delete from cursor down and save commands
+delete_save = d
+
+# delete from cursor down and don't save commands
+delete_no_save = x
+
+# rerun saved commands
+rerun_commands = r

@@ -773,3 +773,129 @@ def stack_function_interpolate(self , strokes):
     frames , reco = self._make_equalish_time(frames , reco)
     return State(before + finalstrokes , {'frames' : frames , 'recording' : reco})
 
+def stack_function_animate(self , strokes):
+    strokes.pop()
+
+    posbreak = 0
+    found = False
+    for i in reversed(range(len(strokes))):
+        posbreak = i
+        if strokes[i] == "---":
+            found = True
+            break
+
+    before = strokes[:posbreak]
+    after = strokes[posbreak:]
+    if found:
+        after = strokes[posbreak + 1:]
+
+    logger.debug(before)
+    logger.debug(after)
+
+    frames_before = []
+    for i in range(len(before)):
+        s = before[i]
+        if s in self._strokes:
+            pts = self._strokes[s]
+            color = int(pts[0][4]) # todo, instead of parameters
+            thickness , red , green , blue , opacity = self._dark_colors[color]
+            shapes_list = draw.simple_stroke_shapes(pts , 
+                                                    parameters = {
+                                                           "thickness" : thickness , 
+                                                            "color" : (int(red) , int(green) , int(blue)) ,
+                                                            "opacity" : int(opacity)
+                                                            })
+            frames_before += shapes_list
+        elif s in self._images:
+            img = self._images[s]
+            shapes_list = [img]
+            frames_before += shapes_list
+
+    rec = [self._recordings[s] for s in after if s in self._recordings]
+    reco = None
+    if len(rec) > 0:
+        reco = numpy.concatenate(rec)
+        logger.debug(str(reco.shape))
+
+    finalstrokes = []
+
+    frames = []
+    for t1 in numpy.linspace(0.0 , 1.0 , self._pause):
+        shapes_list_part = []
+        ab = [None , None]
+        abi = 0
+        for s in after:
+            logger.debug(str(after))
+            logger.debug(str(ab))
+            if s in self._savedstacks:
+                ab[abi] = s
+                abi += 1
+                abi = abi % 2
+            logger.debug(str(ab))
+
+            if ab[0] is not None and ab[1] is not None:
+                strokesa = [s for s in self._savedstacks[ab[0]] if s in self._strokes]
+                strokesb = [s for s in self._savedstacks[ab[1]] if s in self._strokes]
+                logger.debug(str(strokesa))
+                logger.debug(str(strokesb))
+                
+                if len(strokesa) == len(strokesb):
+                    for i in range(len(strokesa)):
+                        sa = strokesa[i]
+                        sb = strokesb[i]
+                        ptsa = self._strokes[sa]
+                        ptsb = self._strokes[sb]
+
+                        if len(ptsa) > 2 and len(ptsb) > 2:
+                            if t1 == 0.0:
+                                finalstrokes += strokesb
+                            logger.debug(str(t1) + " " + str(ab[0]) + " " + str(ab[1]) + " " + str(i))
+                            npa = numpy.array(ptsa)
+                            npb = numpy.array(ptsb)
+                            ta = (npa[: , 3] - npa[0 , 3]) / (npa[-1 , 3] - npa[0 , 3])
+                            tb = (npb[: , 3] - npb[0 , 3]) / (npb[-1 , 3] - npb[0 , 3])
+
+                            interpolator = scipy.interpolate.make_interp_spline(ta , npa[: , [0 , 1 , 2]] , k = 1)
+
+                            newa = interpolator(tb)
+
+                            newpts = []
+                            for i in range(newa.shape[0]):
+                                newx = newa[i , 0] * (1.0 - t1) + npb[i , 0] * t1
+                                newy = newa[i , 1] * (1.0 - t1) + npb[i , 1] * t1
+                                newp = newa[i , 2] * (1.0 - t1) + npb[i , 1] * t1
+                                if newx < 0:
+                                    newx = 0.0
+                                elif newx > 1:
+                                    newx = 1.0
+                                if newy < 0:
+                                    newy = 0.0
+                                elif newy > 1.0 / self._ar:
+                                    newy = 1.0 / self._ar
+                                if newp < 0:
+                                    newp = 0.0
+                                elif newp > 1:
+                                    newp = 1.0
+                                newpts.append(
+                                        [newx,
+                                         newy,
+                                         newp,
+                                         ptsb[i][3] , ptsb[i][4]]
+                                        )
+                            color = int(ptsb[0][4]) # todo, instead of parameters
+                            color = int(ptsb[0][4]) # todo, instead of parameters
+                            thickness , red , green , blue , opacity = self._dark_colors[color]
+                            shapes_list_part += draw.simple_stroke_shapes(newpts , 
+                                                                    parameters = {
+                                                                           "thickness" : thickness , 
+                                                                            "color" : (int(red) , int(green) , int(blue)) ,
+                                                                            "opacity" : int(opacity)
+                                                                            })
+
+                ab = [None , None]
+            
+        frames.append(frames_before + shapes_list_part)
+
+    frames , reco = self._make_equalish_time(frames , reco)
+    return State(before + finalstrokes , {'frames' : frames , 'recording' : reco})
+

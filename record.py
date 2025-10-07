@@ -6,7 +6,6 @@ import numpy
 from log import logger
 
 import draw
-import stackfunctions
 from state import State
 
 class Record:
@@ -68,6 +67,9 @@ class Record:
 
         # for hashing
 
+        self._hash_hits = 0
+        self._hash_misses = 0
+
         self._hashed_function_values = dict()
 
         logger.debug(str(id(self)))
@@ -76,13 +78,18 @@ class Record:
 
     def _record_hash(self , f):
         def g(r , stack):
-            logger.debug(str(id(self)))
-            h = hash((tuple(stack) , f.__name__))
+            #h = hash((tuple(stack) , f.__name__))
+            # todo can this be improved
+            h = ",".join(stack) + "      " + f.__name__
             if h in self._hashed_function_values:
+                self._hash_hits += 1
+                logger.debug("hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
                 return self._hashed_function_values[h]
             else:
                 val = f(r , stack)
                 self._hashed_function_values[h] = val
+                self._hash_misses += 1
+                logger.debug("hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
                 return val
         return g
 
@@ -115,7 +122,10 @@ class Record:
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause , \
         self._samplerate , self._channels , self._fade , self._framerate , self._hashed_function_values = state
-        
+       
+        self._hash_hits = 0
+        self._hash_misses = 0
+
         self._stroke = []
         self._command = ""
         self._set_functions()
@@ -165,6 +175,7 @@ class Record:
     # _functions
 
     def _set_functions(self):
+        import stackfunctions
         self._functions = dict()
         for x in stackfunctions.__dict__:
             if "stack_function" in x:

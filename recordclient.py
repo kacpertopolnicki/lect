@@ -64,6 +64,23 @@ class RecordClient:
         
         self._configuration = record.get_configuration()
 
+        # CTRL KEYS
+
+        self._preview_audio = self._configuration["ctrlkeys"]["preview_audio"].strip()
+        self._preview_video = self._configuration["ctrlkeys"]["preview_video"].strip()
+        self._preview_save = self._configuration["ctrlkeys"]["preview_save"].strip()
+        self._save = self._configuration["ctrlkeys"]["save"].strip()
+        self._sound_record = self._configuration["ctrlkeys"]["sound_record"].strip()
+        self._write_pickle = self._configuration["ctrlkeys"]["write_pickle"].strip()
+        self._paste_image = self._configuration["ctrlkeys"]["paste_image"].strip()
+        self._cursor_up = self._configuration["ctrlkeys"]["cursor_up"].strip()
+        self._cursor_down = self._configuration["ctrlkeys"]["cursor_down"].strip()
+        self._cursor_up_10 = self._configuration["ctrlkeys"]["cursor_up_10"].strip()
+        self._cursor_down_10 = self._configuration["ctrlkeys"]["cursor_down_10"].strip()
+        self._delete_save = self._configuration["ctrlkeys"]["delete_save"].strip()
+        self._delete_no_save = self._configuration["ctrlkeys"]["delete_no_save"].strip()
+        self._rerun_commands = self._configuration["ctrlkeys"]["rerun_commands"].strip()
+        
         # GEOMETRY
 
         self._ar = self._configuration["paper"].getfloat("aspectratio")
@@ -223,29 +240,36 @@ class RecordClient:
                     if 48 <= symbol <= 57:
                         logger.debug("color number = " + str(int(symbol) - 48) + ".")
                         self._color = int(symbol) - 48
-                    elif symbol == pyglet.window.key.J:
+                    #elif symbol == pyglet.window.key.J:
+                    elif symbol == ord(self._cursor_down):
                         self._state_cursor -= 1
-                    elif symbol == pyglet.window.key.K:
+                    #elif symbol == pyglet.window.key.K:
+                    elif symbol == ord(self._cursor_up):
                         self._state_cursor += 1
-                    elif symbol == pyglet.window.key.H:
+                    #elif symbol == pyglet.window.key.H:
+                    elif symbol == ord(self._cursor_down_10):
                         self._state_cursor -= 10
-                    elif symbol == pyglet.window.key.L:
+                    #elif symbol == pyglet.window.key.L:
+                    elif symbol == ord(self._cursor_up_10):
                         self._state_cursor += 10
-                    elif symbol == pyglet.window.key.D:
+                    #elif symbol == pyglet.window.key.D:
+                    elif symbol == ord(self._delete_save):
                         commands = self._record.modify_after_cursor(self._state_cursor)
                         if commands is not None:
                             self._commands_after = commands 
                             self._commands_after_index = 0
                         self._state_cursor = -1
                         self._record.reexecute(cursor = self._state_cursor)
-                    elif symbol == pyglet.window.key.X:
+                    #elif symbol == pyglet.window.key.X:
+                    elif symbol == ord(self._delete_no_save):
                         commands = self._record.modify_after_cursor(self._state_cursor , save_commands = False)
                         if commands is not None:
                             self._commands_after = commands 
                             self._commands_after_index = 0
                         self._state_cursor = -1
                         self._record.reexecute(cursor = self._state_cursor)
-                    elif symbol == pyglet.window.key.R:
+                    #elif symbol == pyglet.window.key.R:
+                    elif symbol == ord(self._rerun_commands):
                         if len(self._commands_after) > 0:
                             for i in range(len(self._commands_after)):
                                 command = self._commands_after[i]
@@ -255,7 +279,8 @@ class RecordClient:
                         self._commands_after = []
                         self._commands_after_index = 0
                         self._status = None
-                    elif symbol == pyglet.window.key.O:
+                    #elif symbol == pyglet.window.key.O:
+                    elif symbol == ord(self._preview_audio): # todo this might not work in the future
                         logger.debug("calculating audio")
 
                         additional = self._record.get_frames(cursor = self._state_cursor)
@@ -280,7 +305,8 @@ class RecordClient:
                             subprocess.run(self._sound_preview_command.strip().split() + [filepath])
 
                         self._status = None
-                    elif symbol == pyglet.window.key.P:
+                    #elif symbol == pyglet.window.key.P:
+                    elif symbol == ord(self._preview_video): # todo this might not work in the future
                         logger.debug("calculating preview")
 
                         additional = self._record.get_frames(cursor = self._state_cursor)
@@ -316,7 +342,8 @@ class RecordClient:
                                 subprocess.run(self._preview_command.strip().split() + [filepath])
 
                         self._status = None
-                    elif symbol == pyglet.window.key.A:
+                    #elif symbol == pyglet.window.key.A:
+                    elif symbol == ord(self._preview_save):
                         all_additional = self._record.get_all_additional()
 
                         len_all_frames = 0
@@ -359,7 +386,8 @@ class RecordClient:
                         finally:
                             video.release()
                         self._status = None
-                    elif symbol == pyglet.window.key.S:
+                    #elif symbol == pyglet.window.key.S:
+                    elif symbol == ord(self._save):
                         all_additional = self._record.get_all_additional()
 
                         len_all_frames = 0
@@ -403,7 +431,8 @@ class RecordClient:
                             video.release()
                         self._status = None
                         
-                    elif symbol == pyglet.window.key.G:
+                    #elif symbol == pyglet.window.key.G:
+                    elif symbol == ord(self._sound_record):
                         if not self._record_sound:
                             logger.debug("starting recording")
                             self._status = "starting recording"
@@ -428,12 +457,14 @@ class RecordClient:
                             logger.debug("done " + str(self._recorded_sound_frames.shape))
                             self._recorded_sound_frames = []
                             self._status = None
-                    elif symbol == pyglet.window.key.W:
+                    #elif symbol == pyglet.window.key.W:
+                    elif symbol == ord(self._write_pickle):
                         logger.debug("saving" + str(self._pickle_path))
                         if self._pickle_path is not None:
                             with open(self._pickle_path , "wb") as f:
                                 pickle.dump(self._record , f)
-                    elif symbol == pyglet.window.key.I:
+                    #elif symbol == pyglet.window.key.I:
+                    elif symbol == ord(self._paste_image):
                         path = pc.paste()
                         if path is not None and os.path.isfile(path):
                             logger.debug("adding image: " + path)
