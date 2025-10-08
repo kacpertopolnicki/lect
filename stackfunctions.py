@@ -1,6 +1,8 @@
 from state import State
 import numpy
 
+import copy
+
 import scipy
 
 import draw
@@ -659,6 +661,15 @@ def stack_function_iposition(self , strokes , memory):
 def stack_function_interpolate(self , strokes , memory):
     strokes.pop()
 
+    strokes_old = copy.deepcopy(strokes)
+
+    numframes = None
+    try:
+        nf = strokes.pop()
+        numframes = int(nf)
+    except:
+        return State(strokes_old , None)
+
     posbreak = 0
     found = False
     for i in reversed(range(len(strokes))):
@@ -725,7 +736,7 @@ def stack_function_interpolate(self , strokes , memory):
             finalstrokes = strokesb
             
             if len(strokesa) == len(strokesb):
-                for t1 in numpy.linspace(0.0 , 1.0 , self._pause):
+                for t1 in numpy.linspace(0.0 , 1.0 , numframes):
                     shapes_list_part = []
                     for i in range(len(strokesa)):
                         sa = strokesa[i]
@@ -785,6 +796,15 @@ def stack_function_interpolate(self , strokes , memory):
 def stack_function_animate(self , strokes , memory):
     strokes.pop()
 
+    strokes_old = copy.deepcopy(strokes)
+
+    numframes = None
+    try:
+        nf = strokes.pop()
+        numframes = int(nf)
+    except:
+        return State(strokes_old , None)
+
     posbreak = 0
     found = False
     for i in reversed(range(len(strokes))):
@@ -829,7 +849,7 @@ def stack_function_animate(self , strokes , memory):
     finalstrokes = []
 
     frames = []
-    for t1 in numpy.linspace(0.0 , 1.0 , self._pause):
+    for t1 in numpy.linspace(0.0 , 1.0 , numframes):
         shapes_list_part = []
         ab = [None , None]
         abi = 0
