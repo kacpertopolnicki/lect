@@ -6,7 +6,7 @@ import scipy
 import draw
 from log import logger
 
-def stack_function_savestack(self , stack):
+def stack_function_savestack(self , stack , memory):
     stack.pop()
 
     posbreak = 0
@@ -29,36 +29,42 @@ def stack_function_savestack(self , stack):
         # - this might conflict with _stroke names
         #   make sure new stroke names are unique
         # - same is true for recording names
-        if name not in self._savedstacks:
-            self._savedstacks[name] = tosave
-            return State(stack , None)
+        #if name not in self._savedstacks:
+        #    self._savedstacks[name] = tosave
+        #    return State(stack , None)
+        if name not in memory:
+            mem = {name : tosave}
+            return State(stack , None , memory = mem)
         else:
             return State(stack , None)
     else:
         return State(stack , None)
 
-def stack_function_appendstack(self , stack):
+def stack_function_appendstack(self , stack , memory):
     # todo
     # - this can be used to execute functions
     #   use _append to append states
     #   add quote
+    logger.debug(memory)
     stack.pop()
     if len(stack) >= 1:
         name = stack[-1]
         previous = stack[:-1]
-        if name in self._savedstacks:
-            return State(previous + self._savedstacks[name] , None)
+        #if name in self._savedstacks:
+        #    return State(previous + self._savedstacks[name] , None)
+        if name in memory:
+            return State(previous + memory[name] , None)
         else:
             return State(stack , None)
     else:
         return State(stack , None)
 
-def stack_function_id(self , stack):
+def stack_function_id(self , stack , memory):
     stack.pop()
 
     return State(stack , [])
 
-def stack_function_pop(self , stack):
+def stack_function_pop(self , stack , memory):
     stack.pop()
     additional = None
 
@@ -67,10 +73,10 @@ def stack_function_pop(self , stack):
 
     return State(stack , additional)
 
-def stack_function_clear(self , stack):
+def stack_function_clear(self , stack , memory):
     return State([] , None)
 
-def stack_function_position(self , strokes):
+def stack_function_position(self , strokes , memory):
     command = strokes.pop()
 
     if len(strokes) < 1:
@@ -138,7 +144,7 @@ def stack_function_position(self , strokes):
     else:
         return State(strokes , None)
 
-def stack_function_center(self , strokes):
+def stack_function_center(self , strokes , memory):
     command = strokes.pop()
 
     break_position = -1
@@ -186,7 +192,7 @@ def stack_function_center(self , strokes):
     else:
         return State(strokes , None)
 
-def stack_function_draw(self , strokes):
+def stack_function_draw(self , strokes , memory):
     strokes.pop()
 
     posbreak = 0
@@ -283,7 +289,7 @@ def stack_function_draw(self , strokes):
     frames , reco = self._make_equalish_time(frames , reco)
     return State(strokes , {'frames' : frames , 'recording' : reco})
 
-def stack_function_drawshort(self , strokes):
+def stack_function_drawshort(self , strokes , memory):
     strokes.pop()
 
     br , bg , bb = self._dark_paper_color
@@ -416,7 +422,7 @@ def stack_function_drawshort(self , strokes):
     frames , reco = self._make_equalish_time(frames , reco)
     return State(before , {'frames' : frames , 'recording' : reco})
 
-def stack_function_printout(self , stack):
+def stack_function_printout(self , stack , memory):
     stack.pop()
 
     frame = []
@@ -442,7 +448,7 @@ def stack_function_printout(self , stack):
 
     return State(stack , {"printout" : frame})
 
-def stack_function_show(self , strokes):
+def stack_function_show(self , strokes , memory):
     br , bg , bb = self._dark_paper_color
 
     frames = []
@@ -518,7 +524,7 @@ def stack_function_show(self , strokes):
     frames , reco = self._make_equalish_time(frames , reco)
     return State([] , {'frames' : frames , 'recording' : reco})
 
-def stack_function_fadeout(self , strokes):
+def stack_function_fadeout(self , strokes , memory):
     br , bg , bb = self._dark_paper_color
 
     frames = []
@@ -557,7 +563,7 @@ def stack_function_fadeout(self , strokes):
     frames , reco = self._make_equalish_time(frames , None)
     return State([] , {'frames' : frames , 'recording' : reco})
 
-def stack_function_fadein(self , strokes):
+def stack_function_fadein(self , strokes , memory):
     strokes.pop()
 
     br , bg , bb = self._dark_paper_color
@@ -598,7 +604,7 @@ def stack_function_fadein(self , strokes):
     frames , reco = self._make_equalish_time(frames , None)
     return State(strokes , {'frames' : frames , 'recording' : reco})
 
-def stack_function_iposition(self , strokes):
+def stack_function_iposition(self , strokes , memory):
     command = strokes.pop()
 
     if len(strokes) < 1:
@@ -650,7 +656,7 @@ def stack_function_iposition(self , strokes):
 
     return State(new_stack , None)
 
-def stack_function_interpolate(self , strokes):
+def stack_function_interpolate(self , strokes , memory):
     strokes.pop()
 
     posbreak = 0
@@ -702,15 +708,18 @@ def stack_function_interpolate(self , strokes):
     for s in after:
         logger.debug(str(after))
         logger.debug(str(ab))
-        if s in self._savedstacks:
+        #if s in self._savedstacks:
+        if s in memory:
             ab[abi] = s
             abi += 1
             abi = abi % 2
         logger.debug(str(ab))
 
         if ab[0] is not None and ab[1] is not None:
-            strokesa = [s for s in self._savedstacks[ab[0]] if s in self._strokes]
-            strokesb = [s for s in self._savedstacks[ab[1]] if s in self._strokes]
+            #strokesa = [s for s in self._savedstacks[ab[0]] if s in self._strokes]
+            #strokesb = [s for s in self._savedstacks[ab[1]] if s in self._strokes]
+            strokesa = [s for s in memory[ab[0]] if s in self._strokes]
+            strokesb = [s for s in memory[ab[1]] if s in self._strokes]
             logger.debug(str(strokesa))
             logger.debug(str(strokesb))
             finalstrokes = strokesb
@@ -738,7 +747,7 @@ def stack_function_interpolate(self , strokes):
                             for i in range(newa.shape[0]):
                                 newx = newa[i , 0] * (1.0 - t1) + npb[i , 0] * t1
                                 newy = newa[i , 1] * (1.0 - t1) + npb[i , 1] * t1
-                                newp = newa[i , 2] * (1.0 - t1) + npb[i , 1] * t1
+                                newp = newa[i , 2] * (1.0 - t1) + npb[i , 2] * t1
                                 if newx < 0:
                                     newx = 0.0
                                 elif newx > 1:
@@ -773,7 +782,7 @@ def stack_function_interpolate(self , strokes):
     frames , reco = self._make_equalish_time(frames , reco)
     return State(before + finalstrokes , {'frames' : frames , 'recording' : reco})
 
-def stack_function_animate(self , strokes):
+def stack_function_animate(self , strokes , memory):
     strokes.pop()
 
     posbreak = 0
@@ -827,15 +836,18 @@ def stack_function_animate(self , strokes):
         for s in after:
             logger.debug(str(after))
             logger.debug(str(ab))
-            if s in self._savedstacks:
+            #if s in self._savedstacks:
+            if s in memory:
                 ab[abi] = s
                 abi += 1
                 abi = abi % 2
             logger.debug(str(ab))
 
             if ab[0] is not None and ab[1] is not None:
-                strokesa = [s for s in self._savedstacks[ab[0]] if s in self._strokes]
-                strokesb = [s for s in self._savedstacks[ab[1]] if s in self._strokes]
+                #strokesa = [s for s in self._savedstacks[ab[0]] if s in self._strokes]
+                #strokesb = [s for s in self._savedstacks[ab[1]] if s in self._strokes]
+                strokesa = [s for s in memory[ab[0]] if s in self._strokes]
+                strokesb = [s for s in memory[ab[1]] if s in self._strokes]
                 logger.debug(str(strokesa))
                 logger.debug(str(strokesb))
                 
@@ -863,7 +875,7 @@ def stack_function_animate(self , strokes):
                             for i in range(newa.shape[0]):
                                 newx = newa[i , 0] * (1.0 - t1) + npb[i , 0] * t1
                                 newy = newa[i , 1] * (1.0 - t1) + npb[i , 1] * t1
-                                newp = newa[i , 2] * (1.0 - t1) + npb[i , 1] * t1
+                                newp = newa[i , 2] * (1.0 - t1) + npb[i , 2] * t1
                                 if newx < 0:
                                     newx = 0.0
                                 elif newx > 1:

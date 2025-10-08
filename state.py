@@ -6,7 +6,7 @@ import pickle
 import zlib
 
 class State:
-    def __init__(self , stack , additional = None , command = None):
+    def __init__(self , stack , additional = None , command = None , memory = None):
         self._stack = copy.deepcopy(stack)
         if additional is not None:
             # sauce : https://stackoverflow.com/questions/19500530/compress-python-object-in-memory
@@ -14,7 +14,29 @@ class State:
         else:
             self._additional = None
         self._command = command
-        logger.debug(str(self))
+        self._memory = dict()
+        if memory is not None:
+            self._memory.update(memory)
+
+    def join_memories(self , other):
+        new_memory = dict()
+        new_memory.update(self._memory)
+        new_memory.update(other._memory)
+       
+        new_stack = copy.deepcopy(self._stack)
+        #new_additional = copy.deepcopy(self.get_additional())
+        new_additional = self.get_additional()
+        new_command = copy.deepcopy(self._command)
+
+        new_state = State(new_stack , 
+                          new_additional ,
+                          command = new_command ,
+                          memory = new_memory)
+
+        return new_state
+
+    def get_memory(self):
+        return copy.deepcopy(self._memory)
 
     def get_stack(self):
         return copy.deepcopy(self._stack)
@@ -109,9 +131,9 @@ class State:
         return "State(" + " , ".join(des) + ")"
 
     def __getstate__(self):
-        return (self._stack , self._additional , self._command)
+        return (self._stack , self._additional , self._command , self._memory)
 
     def __setstate__(self , state):
-        self._stack , self._additional , self._command = state
+        self._stack , self._additional , self._command , self._memory = state
 
 

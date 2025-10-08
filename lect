@@ -62,6 +62,8 @@ if __name__ == "__main__":
                                 dark_pallete = "default_pallete" ,
                                 light_pallete = "light_pallete")
 
+            record_client = None
+
         try:
             record_client = recordclient.RecordClient(args.animation , args.audio , rec ,
                                                       dark_pallete = "default_pallete" ,
@@ -71,11 +73,12 @@ if __name__ == "__main__":
 
         finally:
 
+            curses.reset_shell_mode()
+            curses.endwin()
+            
             record_client.clean()
 
             if args.save is not None:
                 with open(args.save , "wb") as f:
                     pickle.dump(rec , f)
             
-        curses.reset_shell_mode()
-        curses.endwin()

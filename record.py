@@ -23,7 +23,7 @@ class Record:
 
         self._images = dict()
 
-        self._savedstacks = dict()
+        #self._savedstacks = dict()
 
         self._configuration = copy.deepcopy(configuration)
 
@@ -77,16 +77,20 @@ class Record:
     # for hashing
 
     def _record_hash(self , f):
-        def g(r , stack):
+        def g(r , stack , memory):
             #h = hash((tuple(stack) , f.__name__))
             # todo can this be improved
-            h = ",".join(stack) + "      " + f.__name__
+            stackstr = ",".join(stack)
+            memorystr = [str(k) + " : " + str(memory[k]) for k in memory]
+            memorystr.sort() # this might be important for hashing dictionaries
+            memorystr = ",".join(memorystr)
+            h = "stack " + stackstr + " memory " + memorystr + " functionname " + f.__name__
             if h in self._hashed_function_values:
                 self._hash_hits += 1
                 logger.debug("hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
                 return self._hashed_function_values[h]
             else:
-                val = f(r , stack)
+                val = f(r , stack , memory)
                 self._hashed_function_values[h] = val
                 self._hash_misses += 1
                 logger.debug("hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
@@ -100,7 +104,6 @@ class Record:
                 self._strokes , 
                 self._recordings ,
                 self._images ,
-                self._savedstacks ,
                 self._configuration , 
                 self._states , 
                 self._dark_paper_color ,
@@ -117,7 +120,7 @@ class Record:
                 self._hashed_function_values)
 
     def __setstate__(self , state):
-        self._unique , self._strokes , self._recordings , self._images , self._savedstacks , \
+        self._unique , self._strokes , self._recordings , self._images , \
         self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause , \
@@ -133,12 +136,15 @@ class Record:
     # modifies _states
 
     def _append(self , state):
-        self._states.append(state)
-        logger.debug(str(self))
-        top = state.get_top()
+        to_append = state
+        if len(self._states) > 0:
+            to_append = state.join_memories(self._states[-1])
+        self._states.append(to_append)
+        logger.debug(str("\n".join([str(s._stack) + " " + str(s._memory) for s in self._states])))
+        top = to_append.get_top()
         if top is not None and top in self._functions:
             method = self._functions[top]
-            new_state = method(self , state.get_stack())
+            new_state = method(self , to_append.get_stack() , to_append.get_memory())
             self._append(new_state)
 
     def _make_equalish_time(self , frames , reco):
