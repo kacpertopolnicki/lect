@@ -17,21 +17,21 @@ In order to run the program:
    (there will be an error if no graphics tablet is detected).
 2) `lect` needs to be ran in an environment with:
    - `curses`, `numpy`, `pyglet`, `PIL`, `cv2`, `sounddevice`, `pyperclip`
-   - `lect -h` should give some information on how to run the program
+3) `lect -h` should give some information on how to run the program
 
 # todo
 
 Below is a partial list of things that need to be done:
 
-1) add tests
-2) strengthen immutability of State
+- add tests
+- strengthen immutability of State
    - verify that they don't change (images are not copied, 
      can you make a numpy array immutable?)
    - _additional is large and is not copied, is this important?
-3) pickle some records and use this for tests
-4) make the code after ctrl-s ctrl-a parallel
-5) add documentation
-6) setup code structure for pip
-7) add tutorial to README.md
-10) remove most calls to logger.debug
-11) read todos in code :-) 
+- pickle some records and use this for tests
+- make the code after ctrl-s ctrl-a parallel
+- add documentation
+- setup code structure for pip
+- add tutorial to README.md
+- remove most calls to logger.debug
+- read todos in code :-) 
