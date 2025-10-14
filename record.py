@@ -11,24 +11,32 @@ from state import State
 class Record:
     def __init__(self , configuration , dark_pallete = "default_pallete" , light_pallete = "default_pallete"):
 
-        logger.debug("__init__")
+        # unique number for stroke and image names
 
         self._unique = 0
 
+        # temporary list of stroke daa
+
         self._stroke = []
+
+        # dictionaries of strokes, recordings and images
 
         self._strokes = {"current" : self._stroke}
 
         self._recordings = dict()
 
         self._images = dict()
-
-        #self._savedstacks = dict()
+        
+        # configuration
 
         self._configuration = copy.deepcopy(configuration)
 
+        # list of states, initialized with a state containing an empty stack
+
         self._states = [State([] , None)]
         
+        # colors
+
         self._dark_paper_color = list(map(int , self._configuration[dark_pallete]["paper_color"].split(",")))
         
         self._dark_colors =  [
@@ -47,32 +55,50 @@ class Record:
                                         ]
                             ]
 
+        # aspect ratio
+
         self._ar = self._configuration["paper"].getfloat("aspectratio")
 
+        # skip self._every frames when drawing text
+
         self._every = self._configuration["frames"].getint("every")
-        
+       
+        # length of pause in frames
+
         self._pause = self._configuration["frames"].getint("pause")
+
+        # temporary string containing the command
 
         self._command = ""
 
+        # read functions from stackfunctions.py
+
         self._set_functions()
+
+        # for sound
 
         self._samplerate = self._configuration["sound"].getint("sample_rate")
 
         self._channels = self._configuration["sound"].getint("channels")
-        
+       
+        # todo, is this used? 
+
         self._fade = self._configuration["sound"].getfloat("fade")
+
+        # frame rate
 
         self._framerate = self._configuration["frames"].getint("frame_rate")
 
+        # (minimum length of stroke segment)**2
+
+        self._min = 1.0 / (self._configuration["frames"].getint("width")**2)
+        
         # for hashing
 
         self._hash_hits = 0
         self._hash_misses = 0
 
         self._hashed_function_values = dict()
-
-        logger.debug(str(id(self)))
 
     # for hashing
 
@@ -87,13 +113,13 @@ class Record:
             h = "stack " + stackstr + " memory " + memorystr + " functionname " + f.__name__
             if h in self._hashed_function_values:
                 self._hash_hits += 1
-                logger.debug("hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
+                logger.debug("In hashed functions, hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
                 return self._hashed_function_values[h]
             else:
                 val = f(r , stack , memory)
                 self._hashed_function_values[h] = val
                 self._hash_misses += 1
-                logger.debug("hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
+                logger.debug("In hashed functions, hits misses : " + str(self._hash_hits) + " " + str(self._hash_misses))
                 return val
         return g
 
@@ -117,6 +143,7 @@ class Record:
                 self._channels ,
                 self._fade ,
                 self._framerate ,
+                self._min ,
                 self._hashed_function_values)
 
     def __setstate__(self , state):
@@ -124,7 +151,8 @@ class Record:
         self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
         self._light_colors , self._ar , self._every , self._pause , \
-        self._samplerate , self._channels , self._fade , self._framerate , self._hashed_function_values = state
+        self._samplerate , self._channels , self._fade , self._framerate , \
+        self._min , self._hashed_function_values = state
        
         self._hash_hits = 0
         self._hash_misses = 0
@@ -140,7 +168,6 @@ class Record:
         if len(self._states) > 0:
             to_append = state.join_memories(self._states[-1])
         self._states.append(to_append)
-        logger.debug(str("\n".join([str(s._stack) + " " + str(s._memory) for s in self._states])))
         top = to_append.get_top()
         if top is not None and top in self._functions:
             method = self._functions[top]
@@ -185,7 +212,6 @@ class Record:
         self._functions = dict()
         for x in stackfunctions.__dict__:
             if "stack_function" in x:
-                logger.debug(x + " " + x[15:])
                 fun = stackfunctions.__dict__[x]
                 self._functions[x[15:]] = self._record_hash(fun) 
     #
@@ -208,7 +234,7 @@ class Record:
         name = "i_" + str(self._unique)
         self._unique += 1
        
-        logger.debug("Adding full image.")
+        logger.debug("Adding full image " + name + ".")
         
         self._images[name] = image
 
@@ -241,8 +267,6 @@ class Record:
 
                 snd[-fadenum:] = (snd[-fadenum:] * mask).astype(snd.dtype)
 
-        logger.debug(name)
-        logger.debug(str(snd.shape))
         self._recordings[name] = snd
                 
         state = self._states[-1]
@@ -308,11 +332,15 @@ class Record:
                 new_state = state.add_to_program(name)
                 self._append(new_state)
         else:
-            self._stroke.append([x , y , p , t , c])
-            self._strokes["current"] = self._stroke
+            ok = True
+            if len(self._stroke) > 0:
+                xp , yp , _ , _ , _ = self._stroke[-1]
+                ok = ok and (xp - x)**2 + (yp  - y)**2 > self._min
+            if ok:                
+                self._stroke.append([x , y , p , t , c])
+                self._strokes["current"] = self._stroke
 
     def add_to_command(self , char):
-        logger.debug("add_to_command(\"" + char + "\")")
         if char == '\n':
             if len(self._command.strip()) > 0:
                 state = self._states[-1]
@@ -327,8 +355,6 @@ class Record:
             self._command += char
 
     def add_command(self , command):
-        logger.debug("add_command(\"" + command + "\")")
-
         state = self._states[-1]
         new_state = state.add_to_program(command)
         self._append(new_state)
@@ -351,7 +377,6 @@ class Record:
                 c = s.get_command()
                 if c is not None:
                     commands.append(c)
-            logger.debug("Commands after cut : " + str(commands))
             if save_commands:
                 return commands
             else:

@@ -97,7 +97,6 @@ class RecordClient:
         self._antialias = self._configuration["frames"].getint("antialias")
         self._preview_command = self._configuration["frames"]["preview_command"]
         self._background_pause = self._configuration["frames"].getint("background_pause")
-        logger.debug("self._antialias : " + str(self._antialias))
 
         # COLORS
 
@@ -107,9 +106,6 @@ class RecordClient:
         self._set_colors(self._pallete)
 
         self._color = 1
-
-        logger.debug("self._paper_color = " + str(self._paper_color))
-        logger.debug("self._colors = " + str(self._colors))
 
         # SOUND
 
@@ -179,7 +175,7 @@ class RecordClient:
                 x0 , y0 , x1 , y1 = self._get_rectangle()
 
                 #self._set_colors(self._dark_pallete)
-                r , b , g  = self._paper_color
+                r , g , b  = self._paper_color
 
                 self._paper_batch = pyglet.graphics.Batch()
                 self._paper = pyglet.shapes.Rectangle(
@@ -222,8 +218,6 @@ class RecordClient:
 
                             draw.pyglet_draw_shapes(shapes_list , (x0 , y0 , x1 , y1) , shps = self._stroke_shapes[s] , batch = self._stroke_batches[s] , background = (r , g , b))
 
-                            logger.debug(" len(self._stroke_shapes[s]) = " + str(len(self._stroke_shapes[s])))
-                            logger.debug(" self._stroke.batches[s] = " + str(self._stroke_batches[s]))
                         elif t is not None and t == "image":
                             logger.debug("Recalculating image " + s + ".")
                             img = self._record.get_image(s)
@@ -238,7 +232,6 @@ class RecordClient:
             def on_key_release(symbol , modifiers):
                 if modifiers == pyglet.window.key.MOD_CTRL:
                     if 48 <= symbol <= 57:
-                        logger.debug("color number = " + str(int(symbol) - 48) + ".")
                         self._color = int(symbol) - 48
                     #elif symbol == pyglet.window.key.J:
                     elif symbol == ord(self._cursor_down):
@@ -281,7 +274,7 @@ class RecordClient:
                         self._status = None
                     #elif symbol == pyglet.window.key.O:
                     elif symbol == ord(self._preview_audio): # todo this might not work in the future
-                        logger.debug("calculating audio")
+                        logger.debug("Calculating audio.")
 
                         additional = self._record.get_frames(cursor = self._state_cursor)
                         
@@ -307,7 +300,7 @@ class RecordClient:
                         self._status = None
                     #elif symbol == pyglet.window.key.P:
                     elif symbol == ord(self._preview_video): # todo this might not work in the future
-                        logger.debug("calculating preview")
+                        logger.debug("Calculating preview.")
 
                         additional = self._record.get_frames(cursor = self._state_cursor)
                         
@@ -434,7 +427,7 @@ class RecordClient:
                     #elif symbol == pyglet.window.key.G:
                     elif symbol == ord(self._sound_record):
                         if not self._record_sound:
-                            logger.debug("starting recording")
+                            logger.debug("Starting recording.")
                             self._status = "starting recording"
                             self._update_curses_screen()
                             # sauce
@@ -445,7 +438,7 @@ class RecordClient:
                             self._is.start()
                             self._record_sound = True
                         else:
-                            logger.debug("ending recording")
+                            logger.debug("Ending recording.")
                             self._status = "ending recording"
                             self._update_curses_screen()
                             self._is.stop()
@@ -454,12 +447,11 @@ class RecordClient:
                             self._record_sound = False
                             self._recorded_sound_frames = numpy.concatenate(self._recorded_sound_frames)
                             self._record.add_sound(self._recorded_sound_frames)
-                            logger.debug("done " + str(self._recorded_sound_frames.shape))
                             self._recorded_sound_frames = []
                             self._status = None
                     #elif symbol == pyglet.window.key.W:
                     elif symbol == ord(self._write_pickle):
-                        logger.debug("saving" + str(self._pickle_path))
+                        logger.debug("Saving to " + str(self._pickle_path) + ".")
                         if self._pickle_path is not None:
                             with open(self._pickle_path , "wb") as f:
                                 pickle.dump(self._record , f)
@@ -467,7 +459,7 @@ class RecordClient:
                     elif symbol == ord(self._paste_image):
                         path = pc.paste()
                         if path is not None and os.path.isfile(path):
-                            logger.debug("adding image: " + path)
+                            logger.debug("Adding image: " + path + ".")
                             image = cv2.imread(path)
                             if image is not None:
                                 self._record.add_image(image)
@@ -575,12 +567,12 @@ class RecordClient:
                 self._status = "Calculating frame " + str(i_frame[0]) + " / " + str(len_all_frames) + "."
                 self._update_curses_screen()
                 logger.info("Calculating frame " + str(i_frame[0]) + " / " + str(len_all_frames) + ".")
-                r , b , g  = self._paper_color
+                r , g , b  = self._paper_color
                 a = 255
                 frame_pil = PIL.Image.new(
                                         mode = "RGBA" , 
                                         size = (w_large , h_large) , 
-                                        color = (r , b , g , a))
+                                        color = (r , g , b , a))
                 frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                 draw.pil_draw_shapes(
                         frame_pil ,
@@ -601,12 +593,12 @@ class RecordClient:
                 self._status = "Calculating printout frame " + str(i_printout[0]) + " / " + str(len_all_printout) + "."
                 self._update_curses_screen()
                 logger.info("Calculating printout frame " + str(i_printout[0]) + " / " + str(len_all_printout) + ".")
-                r , b , g  = self._paper_color
+                r , g , b  = self._paper_color
                 a = 255
                 frame_pil = PIL.Image.new(
                                         mode = "RGBA" , 
                                         size = (w_large , h_large) , 
-                                        color = (r , b , g , a))
+                                        color = (r , g , b , a))
                 frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                 draw.pil_draw_shapes(
                         frame_pil ,
@@ -615,13 +607,8 @@ class RecordClient:
                         self._get_rectangle(
                             size = (w_large , h_large)) , background = (r , g , b))
                 if aa != 1:
-                    logger.debug("frame_pil.resize(...)")
                     frame_pil = frame_pil.resize((w_small , h_small) , resample = PIL.Image.LANCZOS)
-                logger.debug(self._printout)
-                logger.debug(str(i_printout[0]))
                 path = os.path.join(self._printout , str(i_printout[0]) + ".png")
-                logger.debug("path : " + str(path))
-                logger.debug("frame_pil : " + str(frame_pil))
                 frame_pil.save(path)
                 i_printout[0] += 1
         if "recording" in additional and audio:

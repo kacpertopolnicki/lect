@@ -102,7 +102,6 @@ def pil_image(image , draw , data , x , y , w , h , geometry = None , opacity = 
     hh = int(h * (x1 - x0))
 
     data_ = cv2.resize(data, (ww, hh))
-    data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB).astype(np.uint8)
     if opacity is not None and background is not None:
         r , g , b = background
         data_ = cv2.cvtColor(data_ , cv2.COLOR_BGR2RGB)

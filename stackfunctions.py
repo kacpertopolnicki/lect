@@ -8,6 +8,11 @@ import scipy
 import draw
 from log import logger
 
+# In principle a subclass of Record could contain
+# the following functions as methods. This would
+# allow clustering different types of methods
+# in different classes.
+
 def stack_function_savestack(self , stack , memory):
     stack.pop()
 
@@ -47,7 +52,6 @@ def stack_function_appendstack(self , stack , memory):
     # - this can be used to execute functions
     #   use _append to append states
     #   add quote
-    logger.debug(memory)
     stack.pop()
     if len(stack) >= 1:
         name = stack[-1]
@@ -123,8 +127,6 @@ def stack_function_position(self , strokes , memory):
 
         addx = xcoord - centerx
         addy = ycoord - centery
-
-        logger.debug("centerx centery addx addy : " + str(centerx) + " " + str(centery) + " " + str(addx) + " " + str(addy))
 
         new_stack = []
         for i in range(len(strokes)):
@@ -210,9 +212,6 @@ def stack_function_draw(self , strokes , memory):
     if found:
         after = strokes[posbreak + 1:]
 
-    logger.debug(before)
-    logger.debug(after)
-
     frames_before = []
     for i in range(len(before)):
         s = before[i]
@@ -236,7 +235,6 @@ def stack_function_draw(self , strokes , memory):
     reco = None
     if len(rec) > 0:
         reco = numpy.concatenate(rec)
-        logger.debug(str(reco.shape))
 
     frames = []
     for istroke in range(len(after)):
@@ -309,9 +307,6 @@ def stack_function_drawshort(self , strokes , memory):
     if found:
         after = strokes[posbreak + 1:]
 
-    logger.debug("before : " + str(before))
-    logger.debug("after : " + str(after))
-
     frames_before = []
     for i in range(len(before)):
         s = before[i]
@@ -335,7 +330,6 @@ def stack_function_drawshort(self , strokes , memory):
     reco = None
     if len(rec) > 0:
         reco = numpy.concatenate(rec)
-        logger.debug(str(reco.shape))
 
     frames = []
     
@@ -375,7 +369,6 @@ def stack_function_drawshort(self , strokes , memory):
             im = self._images[after[istroke]]
             for i in range(2 * self._pause + 1):
                 t = float(i) / (2 * self._pause)
-                logger.debug(str(t))
                 newim = {"type" : "image" ,
                          "data" : im["data"] , 
                          "ar" : im["ar"] , 
@@ -490,7 +483,6 @@ def stack_function_show(self , strokes , memory):
     reco = None
     if len(rec) > 0:
         reco = numpy.concatenate(rec)
-        logger.debug(str(reco.shape))
 
     for i in reversed(range(2 * self._pause + 1)):
         t = float(i) / (2 * self._pause)
@@ -583,9 +575,6 @@ def stack_function_disappear(self , strokes , memory):
     if found:
         after = strokes[posbreak + 1:]
 
-    logger.debug(before)
-    logger.debug(after)
-    
     frames_before = []
     for i in range(len(before)):
         s = before[i]
@@ -609,7 +598,6 @@ def stack_function_disappear(self , strokes , memory):
     reco = None
     if len(rec) > 0:
         reco = numpy.concatenate(rec)
-        logger.debug(str(reco.shape))
 
     frames = []
 
@@ -711,9 +699,6 @@ def stack_function_appear(self , strokes , memory):
     if found:
         after = strokes[posbreak + 1:]
 
-    logger.debug(before)
-    logger.debug(after)
-    
     frames_before = []
     for i in range(len(before)):
         s = before[i]
@@ -737,7 +722,6 @@ def stack_function_appear(self , strokes , memory):
     reco = None
     if len(rec) > 0:
         reco = numpy.concatenate(rec)
-        logger.debug(str(reco.shape))
 
     frames = []
 
@@ -835,8 +819,6 @@ def stack_function_iposition(self , strokes , memory):
     except Exception as s:
         return State(strokes , None)
 
-    logger.debug(str(xcoord) + " " + str(ycoord) + " " + str(scale))
-
     break_position = -1
     for i in range(len(strokes)):
         s = strokes[i]
@@ -892,9 +874,6 @@ def stack_function_interpolate(self , strokes , memory):
     if found:
         after = strokes[posbreak + 1:]
 
-    logger.debug(before)
-    logger.debug(after)
-
     frames_before = []
     for i in range(len(before)):
         s = before[i]
@@ -918,7 +897,6 @@ def stack_function_interpolate(self , strokes , memory):
     reco = None
     if len(rec) > 0:
         reco = numpy.concatenate(rec)
-        logger.debug(str(reco.shape))
 
     finalstrokes = []
 
@@ -926,22 +904,17 @@ def stack_function_interpolate(self , strokes , memory):
     ab = [None , None]
     abi = 0
     for s in after:
-        logger.debug(str(after))
-        logger.debug(str(ab))
         #if s in self._savedstacks:
         if s in memory:
             ab[abi] = s
             abi += 1
             abi = abi % 2
-        logger.debug(str(ab))
 
         if ab[0] is not None and ab[1] is not None:
             #strokesa = [s for s in self._savedstacks[ab[0]] if s in self._strokes]
             #strokesb = [s for s in self._savedstacks[ab[1]] if s in self._strokes]
             strokesa = [s for s in memory[ab[0]] if s in self._strokes]
             strokesb = [s for s in memory[ab[1]] if s in self._strokes]
-            logger.debug(str(strokesa))
-            logger.debug(str(strokesb))
             finalstrokes = strokesb
             
             if len(strokesa) == len(strokesb):
@@ -1027,9 +1000,6 @@ def stack_function_animate(self , strokes , memory):
     if found:
         after = strokes[posbreak + 1:]
 
-    logger.debug(before)
-    logger.debug(after)
-
     frames_before = []
     for i in range(len(before)):
         s = before[i]
@@ -1053,7 +1023,6 @@ def stack_function_animate(self , strokes , memory):
     reco = None
     if len(rec) > 0:
         reco = numpy.concatenate(rec)
-        logger.debug(str(reco.shape))
 
     finalstrokes = []
 
@@ -1063,22 +1032,17 @@ def stack_function_animate(self , strokes , memory):
         ab = [None , None]
         abi = 0
         for s in after:
-            logger.debug(str(after))
-            logger.debug(str(ab))
             #if s in self._savedstacks:
             if s in memory:
                 ab[abi] = s
                 abi += 1
                 abi = abi % 2
-            logger.debug(str(ab))
 
             if ab[0] is not None and ab[1] is not None:
                 #strokesa = [s for s in self._savedstacks[ab[0]] if s in self._strokes]
                 #strokesb = [s for s in self._savedstacks[ab[1]] if s in self._strokes]
                 strokesa = [s for s in memory[ab[0]] if s in self._strokes]
                 strokesb = [s for s in memory[ab[1]] if s in self._strokes]
-                logger.debug(str(strokesa))
-                logger.debug(str(strokesb))
                 
                 if len(strokesa) == len(strokesb):
                     for i in range(len(strokesa)):
@@ -1090,7 +1054,6 @@ def stack_function_animate(self , strokes , memory):
                         if len(ptsa) > 2 and len(ptsb) > 2:
                             if t1 == 0.0:
                                 finalstrokes += strokesb
-                            logger.debug(str(t1) + " " + str(ab[0]) + " " + str(ab[1]) + " " + str(i))
                             npa = numpy.array(ptsa)
                             npb = numpy.array(ptsb)
                             ta = (npa[: , 3] - npa[0 , 3]) / (npa[-1 , 3] - npa[0 , 3])
