@@ -80,6 +80,7 @@ class RecordClient:
         self._delete_save = self._configuration["ctrlkeys"]["delete_save"].strip()
         self._delete_no_save = self._configuration["ctrlkeys"]["delete_no_save"].strip()
         self._rerun_commands = self._configuration["ctrlkeys"]["rerun_commands"].strip()
+        self._grid_onoff = self._configuration["ctrlkeys"]["grid_onoff"].strip()
         
         # GEOMETRY
 
@@ -151,6 +152,14 @@ class RecordClient:
             curses.curs_set(0) 
             self._update_curses_screen()
 
+        # GRID
+
+        self._grid_batch = pyglet.graphics.Batch()
+        self._grid_lines = []
+        self._grid_lines_n = self._configuration["grid"].getint("grid_lines")
+        self._grid_color = list(map(int , self._configuration["grid"]["grid_color"].split(",")))
+        self._grid_on = False
+
         # WINDOW
        
         if self._gui:
@@ -185,6 +194,36 @@ class RecordClient:
                     color = self._paper_color ,
                     batch = self._paper_batch)
                 self._paper_batch.draw()
+
+                if self._stroke_recalculate:
+                    self._grid_batch = pyglet.graphics.Batch()
+                    self._grid_lines = []
+                    d = (x1 - x0) / self._grid_lines_n
+                    x = x0 + d
+                    while x < x1:
+                        lx0 , ly0 = x , y0
+                        lx1 , ly1 = x , y1
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid_batch)
+                        self._grid_lines.append(lns)
+                        x += d
+                    y = y0 + 0.5 * (y1 - y0) + 0.5 * d
+                    while y < y1:
+                        lx0 , ly0 = x0 , y
+                        lx1 , ly1 = x1 , y
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid_batch)
+                        self._grid_lines.append(lns)
+                        y += d
+                    y = y0 + 0.5 * (y1 - y0) - 0.5 * d
+                    while y > y0:
+                        lx0 , ly0 = x0 , y
+                        lx1 , ly1 = x1 , y
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid_batch)
+                        self._grid_lines.append(lns)
+                        y -= d
+                    c = pyglet.shapes.Circle(0.5 * (x0 + x1) , 0.5 * (y0 + y1) , 3 , color = self._grid_color , batch = self._grid_batch)
+                    self._grid_lines.append(c)
+                if self._grid_on:
+                    self._grid_batch.draw()
 
                 pts = self._record.get_stroke("current")
                 if len(pts) >= 2:
@@ -245,6 +284,8 @@ class RecordClient:
                     #elif symbol == pyglet.window.key.L:
                     elif symbol == ord(self._cursor_up_10):
                         self._state_cursor += 10
+                    elif symbol == ord(self._grid_onoff):
+                        self._grid_on = not self._grid_on
                     #elif symbol == pyglet.window.key.D:
                     elif symbol == ord(self._delete_save):
                         commands = self._record.modify_after_cursor(self._state_cursor)

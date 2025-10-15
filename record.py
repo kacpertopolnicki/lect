@@ -342,7 +342,8 @@ class Record:
 
     def add_to_command(self , char):
         if char == '\n':
-            if len(self._command.strip()) > 0:
+            # commands with _ are reserved
+            if len(self._command.strip()) > 0 and '_' not in self._command.strip():
                 state = self._states[-1]
                 new_state = state.add_to_program(self._command.strip())
                 self._append(new_state)

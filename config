@@ -39,6 +39,11 @@ color_7 = 0.004 , 10 , 200 , 10 , 255
 color_8 = 0.004 , 10 , 10 , 200 , 255
 color_9 = 0.001 , 10 , 10 , 10 , 255
 
+[grid]
+
+grid_lines = 31
+grid_color = 100,100,100
+
 [frames]
 
 preview_width = 896
@@ -46,7 +51,7 @@ preview_height = 506
 width = 1920
 height = 1080
 antialias = 2
-every = 10
+every = 5
 pause = 24
 frame_rate = 24
 preview_command = mpv --loop
@@ -109,3 +114,6 @@ delete_no_save = x
 
 # rerun saved commands
 rerun_commands = r
+
+# grid on off
+grid_onoff = q
