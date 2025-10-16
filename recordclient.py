@@ -13,6 +13,7 @@ import subprocess
 import sounddevice as sd
 import wave
 import pyperclip as pc
+import math
 
 from log import logger
 import draw
@@ -155,10 +156,22 @@ class RecordClient:
         # GRID
 
         self._grid_batch = pyglet.graphics.Batch()
-        self._grid_lines = []
-        self._grid_lines_n = self._configuration["grid"].getint("grid_lines")
+        self._grid_shapes = []
+
+        self._grid1_batch = pyglet.graphics.Batch()
+        self._grid1_shapes = []
+
+        self._grid2_batch = pyglet.graphics.Batch()
+        self._grid2_shapes = []
+
+        self._grid3_batch = pyglet.graphics.Batch()
+        self._grid3_shapes = []
+
+        self._grid_types = [None , self._grid_batch , self._grid1_batch , self._grid2_batch , self._grid3_batch]
+
+        self._grid_shapes_n = self._configuration["grid"].getint("grid_lines")
         self._grid_color = list(map(int , self._configuration["grid"]["grid_color"].split(",")))
-        self._grid_on = False
+        self._grid_on = 0
 
         # WINDOW
        
@@ -197,33 +210,111 @@ class RecordClient:
 
                 if self._stroke_recalculate:
                     self._grid_batch = pyglet.graphics.Batch()
-                    self._grid_lines = []
-                    d = (x1 - x0) / self._grid_lines_n
+                    self._grid_shapes = []
+                    d = (x1 - x0) / self._grid_shapes_n
                     x = x0 + d
                     while x < x1:
                         lx0 , ly0 = x , y0
                         lx1 , ly1 = x , y1
                         lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid_batch)
-                        self._grid_lines.append(lns)
+                        self._grid_shapes.append(lns)
                         x += d
                     y = y0 + 0.5 * (y1 - y0) + 0.5 * d
                     while y < y1:
                         lx0 , ly0 = x0 , y
                         lx1 , ly1 = x1 , y
                         lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid_batch)
-                        self._grid_lines.append(lns)
+                        self._grid_shapes.append(lns)
                         y += d
                     y = y0 + 0.5 * (y1 - y0) - 0.5 * d
                     while y > y0:
                         lx0 , ly0 = x0 , y
                         lx1 , ly1 = x1 , y
                         lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid_batch)
-                        self._grid_lines.append(lns)
+                        self._grid_shapes.append(lns)
                         y -= d
                     c = pyglet.shapes.Circle(0.5 * (x0 + x1) , 0.5 * (y0 + y1) , 3 , color = self._grid_color , batch = self._grid_batch)
-                    self._grid_lines.append(c)
-                if self._grid_on:
-                    self._grid_batch.draw()
+                    self._grid_shapes.append(c)
+
+                    self._grid1_batch = pyglet.graphics.Batch()
+                    self._grid1_shapes = []
+                    for x in numpy.linspace(x0 , x1 , 4):
+                        lx0 , ly0 = x , y0
+                        lx1 , ly1 = x , y1
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid1_batch)
+                        self._grid1_shapes.append(lns)
+                    for y in numpy.linspace(y0 , y1 , 4):
+                        lx0 , ly0 = x0 , y
+                        lx1 , ly1 = x1 , y
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid1_batch)
+                        self._grid1_shapes.append(lns)
+                    c = pyglet.shapes.Circle(0.5 * (x0 + x1) , 0.5 * (y0 + y1) , 3 , color = self._grid_color , batch = self._grid1_batch)
+                    self._grid1_shapes.append(c)
+
+                    self._grid2_batch = pyglet.graphics.Batch()
+                    self._grid2_shapes = []
+                    for x in numpy.linspace(x0 , x1 , 5):
+                        lx0 , ly0 = x , y0
+                        lx1 , ly1 = x , y1
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid2_batch)
+                        self._grid2_shapes.append(lns)
+                    for y in numpy.linspace(y0 , y1 , 5):
+                        lx0 , ly0 = x0 , y
+                        lx1 , ly1 = x1 , y
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid2_batch)
+                        self._grid2_shapes.append(lns)
+                    
+                    c = pyglet.shapes.Circle(0.5 * (x0 + x1) , 0.5 * (y0 + y1) , 3 , color = self._grid_color , batch = self._grid2_batch)
+                    self._grid2_shapes.append(c)
+
+                    self._grid3_batch = pyglet.graphics.Batch()
+                    self._grid3_shapes = []
+                    dx = (x1 - x0) / self._grid_shapes_n
+                    x = x0 - 2 * int((x1 - x0) / dx) * dx
+                    while x < x1 + 2 * (x1 - x0): 
+                        px0 , py0 = x , 0.5 * (y0 + y1)
+                        lx0 , ly0 = x0 , py0 + (x - x0) * math.tan(math.pi / 6.0)
+                        lx1 , ly1 = x1 , py0 - (x1 - x) * math.tan(math.pi / 6.0)
+                        if ly0 > y1:
+                            lx0 , ly0 = px0 - 0.5 * (y1 - y0) / math.tan(math.pi / 6.0) , y1
+                        if ly1 < y0:
+                            lx1 , ly1 = px0 + 0.5 * (y1 - y0) / math.tan(math.pi / 6.0) , y0
+
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid3_batch)
+                        self._grid3_shapes.append(lns)
+                        x += dx
+                    
+                    x = x0 - 2 * int((x1 - x0) / dx) * dx
+                    while x < x1 + 2 * (x1 - x0): 
+                        px0 , py0 = x , 0.5 * (y0 + y1)
+                        lx0 , ly0 = x0 , py0 - (x - x0) * math.tan(math.pi / 6.0)
+                        lx1 , ly1 = x1 , py0 + (x1 - x) * math.tan(math.pi / 6.0)
+                        if ly0 < y0:
+                            lx0 , ly0 = px0 - 0.5 * (y1 - y0) / math.tan(math.pi / 6.0) , y0
+                        if ly1 > y1:
+                            lx1 , ly1 = px0 + 0.5 * (y1 - y0) / math.tan(math.pi / 6.0) , y1
+
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid3_batch)
+                        self._grid3_shapes.append(lns)
+                        x += dx
+                    
+                    x = x0 + dx
+                    while x < x1: 
+                        lx0 , ly0 = x , y0
+                        lx1 , ly1 = x , y1
+
+                        lns = pyglet.shapes.MultiLine((lx0 , ly0) , (lx1 , ly1) , color = self._grid_color , batch = self._grid3_batch)
+                        self._grid3_shapes.append(lns)
+                        x += dx / 2
+                    
+                    c = pyglet.shapes.Circle(0.5 * (x0 + x1) , 0.5 * (y0 + y1) , 3 , color = self._grid_color , batch = self._grid3_batch)
+                    self._grid3_shapes.append(c)
+
+                    self._grid_types = [None , self._grid_batch , self._grid1_batch , self._grid2_batch , self._grid3_batch]
+
+                grid_batch = self._grid_types[self._grid_on]
+                if grid_batch is not None:
+                    grid_batch.draw()
 
                 pts = self._record.get_stroke("current")
                 if len(pts) >= 2:
@@ -285,7 +376,8 @@ class RecordClient:
                     elif symbol == ord(self._cursor_up_10):
                         self._state_cursor += 10
                     elif symbol == ord(self._grid_onoff):
-                        self._grid_on = not self._grid_on
+                        self._grid_on += 1
+                        self._grid_on = self._grid_on % len(self._grid_types)
                     #elif symbol == pyglet.window.key.D:
                     elif symbol == ord(self._delete_save):
                         commands = self._record.modify_after_cursor(self._state_cursor)
