@@ -7,6 +7,18 @@ Traditionally, information in technical subjects (mathematics, physics, ...)
 was shared using chalk and a blackboard. This simple medium is surprisingly
 efficient and *lect* is a modern take on this approach. 
 
+# installation
+
+Use at your own risk!
+
+In order to install:
+
+1) Create a new virtual environment using `venc`.
+2) Activate this environment.
+3) Install requirements using `pip`.
+4) Run `lect -h` for help information.
+5) Deactivate environent after you are done working with lect.
+
 # usage
 
 Use at your own risk!
