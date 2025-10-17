@@ -2,12 +2,13 @@
 
 import os
 import configparser
-import record
-import recordclient
 import pickle
 import argparse
 import sys
 import curses
+
+from recordtools import record
+from recordtools import recordclient
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog = "lect")

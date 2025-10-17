@@ -1,6 +1,6 @@
-lectlog
-temporary.mp4
-temporary.wav
+recordtools/lectlog
+recordtools/temporary.mp4
+recordtools/temporary.wav
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

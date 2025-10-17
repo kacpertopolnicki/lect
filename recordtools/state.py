@@ -1,9 +1,8 @@
 import copy
-
-from log import logger
-
 import pickle
 import zlib
+
+from recordtools.log import logger
 
 class State:
     def __init__(self , stack , additional = None , command = None , memory = None):

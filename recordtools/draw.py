@@ -9,7 +9,7 @@ import cv2
 
 import time
 
-from log import logger
+from recordtools.log import logger
 
 ROT90 = np.array([[0.0 , -1.0] , [1.0 , 0.0]] , dtype = np.float64)
 

@@ -3,10 +3,9 @@ import logging
 import os
 import numpy
 
-from log import logger
-
-import draw
-from state import State
+from recordtools.log import logger
+from recordtools import draw
+from recordtools.state import State
 
 class Record:
     def __init__(self , configuration , dark_pallete = "default_pallete" , light_pallete = "default_pallete"):
@@ -208,7 +207,7 @@ class Record:
     # _functions
 
     def _set_functions(self):
-        import stackfunctions
+        from recordtools import stackfunctions
         self._functions = dict()
         for x in stackfunctions.__dict__:
             if "stack_function" in x:

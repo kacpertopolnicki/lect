@@ -1,12 +1,10 @@
-from state import State
 import numpy
-
 import copy
-
 import scipy
 
-import draw
-from log import logger
+from recordtools.state import State
+from recordtools import draw
+from recordtools.log import logger
 
 # In principle a subclass of Record could contain
 # the following functions as methods. This would
@@ -81,6 +79,47 @@ def stack_function_pop(self , stack , memory):
 
 def stack_function_clear(self , stack , memory):
     return State([] , None)
+
+def stack_function_move(self , strokes , memory):
+    command = strokes.pop()
+
+    if len(strokes) < 1:
+        return State(strokes , None)
+
+    xycoord = strokes.pop()
+
+    xcoord , ycoord = None , None
+
+    try:
+        xcoord , ycoord = xycoord.split(',')
+        xcoord = float(xcoord)
+        ycoord = float(ycoord)
+    except Exception as s:
+        return State(strokes , None)
+
+    break_position = -1
+    for i in range(len(strokes)):
+        s = strokes[i]
+        if s == "---":
+            break_position = i
+
+    new_stack = []
+    for i in range(len(strokes)):
+        s = strokes[i]
+        if i > break_position:
+            if s in self._strokes:
+                pts = self._strokes[s]
+                newpts = [
+                            [xcoord + x , ycoord + y , p , t , style] 
+                            for x , y , p , t , style in pts]
+
+                new_stack.append(self._add_full_stroke(newpts))
+            else:
+                new_stack.append(s)
+        else:
+            new_stack.append(s)
+
+    return State(new_stack , None)
 
 def stack_function_position(self , strokes , memory):
     command = strokes.pop()
