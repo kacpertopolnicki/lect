@@ -9,7 +9,7 @@ import cv2
 
 import time
 
-from recordtools.log import logger
+from .log import logger
 
 ROT90 = np.array([[0.0 , -1.0] , [1.0 , 0.0]] , dtype = np.float64)
 
@@ -135,6 +135,70 @@ def pil_draw_shapes(image , draw , shapes_list , paperGeometry , background = No
                            geometry = paperGeometry , opacity = s["opacity"] , background = background)
 # for drawing strokes
 
+def _simple_stroke_shapes(pts , parameters = None):
+
+    if len(pts) < 4:
+        return []
+
+    thickness = 0.005
+    color = (255 , 255 , 255)
+    opacity = 255
+    if parameters is not None:
+        thickness = parameters["thickness"]
+        color = parameters["color"]
+        opacity = parameters["opacity"]
+
+    ptsnp = np.array(pts , dtype = np.float64)
+
+    coord = ptsnp[: , :2]
+    press = ptsnp[: , 2]
+
+    # normalized vectors along segment
+    nvect = np.roll(coord , -1 , axis = 0) - coord 
+    nvect = nvect / np.linalg.norm(nvect , axis = 1)[: , None] # todo, the last value is problematic
+
+    # normalized vectors perpendicular to segment
+    pvect = np.matmul(ROT90 , nvect.T).T
+
+    # radius
+    rad = press * thickness
+    
+    # vectors pointg twards vertexes
+    vvect = np.roll(pvect , 1 , axis = 0) + pvect
+    vvect = vvect / np.linalg.norm(vvect , axis = 1)[: , None] # todo, the last value is problematic
+    vvect = vvect * np.roll(rad , -1)[: , None]
+
+    allshapes = []
+
+    for j in range(1 , len(ptsnp) - 2):
+        # j is the starting point of segment
+        p1x , p1y = float(
+                            (coord[j , 0] + vvect[j , 0]) 
+                    ) , float(
+                            (coord[j , 1] + vvect[j , 1]) 
+                    )
+        p2x , p2y = float(
+                            (coord[j , 0] - vvect[j , 0]) 
+                    ) , float(
+                            (coord[j , 1] - vvect[j , 1]) 
+                    )
+        p3x , p3y = float(
+                            (coord[j + 1 , 0] - vvect[j + 1 , 0]) 
+                    ) , float(
+                            (coord[j + 1 , 1] - vvect[j + 1 , 1]) 
+                    )
+        p4x , p4y = float(
+                            (coord[j + 1 , 0] + vvect[j + 1 , 0]) 
+                    ) , float(
+                            (coord[j + 1 , 1] + vvect[j + 1 , 1]) 
+                    )
+        
+        poly = {"type" : "polygon" , "points" : ((p1x , p1y) , (p2x , p2y) , (p3x , p3y) , (p4x , p4y)) , "color" : color , "opacity" : opacity}
+        
+        allshapes.append(poly)
+        
+    return allshapes
+
 def simple_stroke_shapes(pts , parameters = None):
 
     if len(pts) < 2:
@@ -164,8 +228,8 @@ def simple_stroke_shapes(pts , parameters = None):
     rad = press * thickness
 
     # polygon todo
-    poly1 = coord + pvect * rad[: , None]
-    poly2 = coord - pvect * rad[: , None]
+    #poly1 = coord + pvect * rad[: , None]
+    #poly2 = coord - pvect * rad[: , None]
 
     allshapes = []
 

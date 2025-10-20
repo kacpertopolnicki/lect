@@ -2,7 +2,7 @@ import copy
 import pickle
 import zlib
 
-from recordtools.log import logger
+from .log import logger
 
 class State:
     def __init__(self , stack , additional = None , command = None , memory = None):

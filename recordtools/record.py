@@ -3,9 +3,9 @@ import logging
 import os
 import numpy
 
-from recordtools.log import logger
-from recordtools import draw
-from recordtools.state import State
+from .log import logger
+from . import draw
+from .state import State
 
 class Record:
     def __init__(self , configuration , dark_pallete = "default_pallete" , light_pallete = "default_pallete"):

@@ -2,9 +2,9 @@ import numpy
 import copy
 import scipy
 
-from recordtools.state import State
-from recordtools import draw
-from recordtools.log import logger
+from .state import State
+from . import draw
+from .log import logger
 
 # In principle a subclass of Record could contain
 # the following functions as methods. This would

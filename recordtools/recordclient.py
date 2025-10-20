@@ -16,9 +16,9 @@ import pyperclip as pc
 import math
 import time
 
-from recordtools.log import logger
-from recordtools import draw
-from recordtools.record import State , Record
+from .log import logger
+from . import draw
+from .record import State , Record
 
 RECORD_CLIENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
