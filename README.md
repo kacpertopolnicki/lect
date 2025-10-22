@@ -76,5 +76,7 @@ or commands (`center`, `show`).
 
 There is another window associated with graphics tablet input. The setup may look like this:
 
-![](https://github.com/kacpertopolnicki/lect/tree/main/readme_resources/sc.png)
+![](https://github.com/kacpertopolnicki/lect/blob/main/readme_resources/sc.png)
+
+Where the small window is the terminal and the larger window is for drawing with a graphics tablet.
 
