@@ -47,7 +47,22 @@ Use at your own risk!
 
 The `lect` script is intended to run from a terminal, and uses
 the `curses` library to write out the states of the 
-programm. Each line represents a single state. For example:
+programm. After starting `lect` using the following command:
+```
+$ /path/to/lect temp.mp4 temp.wav -p temp_printout -s temp.pickle
+```
+the user will be presented with two windows:
+![](https://github.com/kacpertopolnicki/lect/blob/main/readme_resources/sc.png)
+The smaller one is the terminal, and the larger one is
+for graphics tablet input. Additionally:
+- the video and audio output will be written to `temp.mp4`, and `temp.wav`,
+- the printout images willbe written to the
+  `temp_printout` directory, 
+- finally, after hitting ESCAPE to terminate the program
+  it's whole state will be pickled to `temp.pickle`.
+
+Each line of the output in the terminal represents a single state of the program. 
+For example, after some work with `lect`, the terminal may show:
 
 ```
 0
@@ -74,9 +89,26 @@ The following columns contain the stack for each state. The stack can be empty,
 can contain strokes created by the user using a graphics tablet (`s_0-s_8` measns strokes `s_0`, `s_1`, ..., `s_8`),
 or commands (`center`, `show`).
 
-There is another window associated with graphics tablet input. The setup may look like this:
+In this case the user first made 9 strokes using the graphics tablet resulting in the state:
+```
+          s_0-s_7 [s_8]
+```
+These strokes represent the text "part 1" surrounded by a rectangle. Next, the user entered the `center` command:
+```
+          s_0-s_8 [center]
+```
+resulting in new strokes `s_9-s_17` that are centered on the screen. These strokes are part of the state:
+```
+          s_9-s_17
+```
+Finally the user enteres the "show" command:
+```
+          s_9-s_17 [show]
+```
+this clears the stack and produces an animation:
+```
+|  @
+```
+Note that when entering commands from the keyboard the focus needs to be on the large window.
 
-![](https://github.com/kacpertopolnicki/lect/blob/main/readme_resources/sc.png)
-
-Where the small window is the terminal and the larger window is for drawing with a graphics tablet.
-
+More tutorial coming soon!
