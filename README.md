@@ -17,7 +17,7 @@ Suggested installation method under:
 2) Activate this environment,
 3) Install requirements using `pip`,
 4) Run `lect -h` for help information,
-5) Deactivate environent after you are done working with lect.
+5) Deactivate environment after you are done working with lect.
 
 On linux this process typically looks like the following:
 
@@ -31,7 +31,7 @@ $ python -m venv lectenv
 ```
 $ . ./lectenv/bin/activate
 ```
-5) Naviate to the directory with the `lect` script.
+5) Navigate to the directory with the `lect` script.
 6) Help information is available from the script:
 ```
 $ . ./lect -h
@@ -47,7 +47,7 @@ Use at your own risk!
 
 The `lect` script is intended to run from a terminal, and uses
 the `curses` library to write out the states of the 
-programm. After starting `lect` using the following command:
+program. After starting `lect` using the following command:
 ```
 $ /path/to/lect temp.mp4 temp.wav -p temp_printout -s temp.pickle
 ```
@@ -56,7 +56,7 @@ the user will be presented with two windows:
 The smaller one is the terminal, and the larger one is
 for graphics tablet input. Additionally:
 - the video and audio output will be written to `temp.mp4` and `temp.wav`,
-- the printout images willbe written to the
+- the printout images will be written to the
   `temp_printout` directory, 
 - after hitting ESCAPE to terminate the program
   it's whole state will be pickled to `temp.pickle`.
@@ -80,12 +80,12 @@ For example, after some work with `lect`, the terminal may show:
 |  @
 ```
 In the first column:
-- `0` marks the beginning of the programm,
+- `0` marks the beginning of the program,
 - `|` marks the current position of the cursor.
 In the next column:
 - `@` marks that there is some audio and video date associated with a state.
 The following columns contain the stack for each state. The stack can be empty,
-can contain strokes created by the user using a graphics tablet (`s_0-s_8` measns strokes `s_0`, `s_1`, ..., `s_8`),
+can contain strokes created by the user using a graphics tablet (`s_0-s_8` means strokes `s_0`, `s_1`, ..., `s_8`),
 or commands (`center`, `show`). The top element is marked using `[...]`.
 
 In this case the user first made 9 strokes using the graphics tablet resulting in the state:
@@ -100,7 +100,7 @@ resulting in new strokes `s_9-s_17` that are centered on the screen. These strok
 ```
           s_9-s_17
 ```
-Finally the user enteres the "show" command:
+Finally the user enters the "show" command:
 ```
           s_9-s_17 [show]
 ```
@@ -117,6 +117,8 @@ is at:
 ```
 and can be moved by holding down the CTRL key and pressing "j" or "k".
 
+Pressing CTRL and "s" at the same time saves the resulting animations to `temp.mp4` and the resulting audio 
+(in this case there is no audio) to "temp.wav".
 To exit the program, focus on the large window and press ESCAPE.
 
 More tutorial coming soon!
