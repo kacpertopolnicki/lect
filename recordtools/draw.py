@@ -11,6 +11,8 @@ import time
 
 from .log import logger
 
+import math
+
 ROT90 = np.array([[0.0 , -1.0] , [1.0 , 0.0]] , dtype = np.float64)
 
 # pyglet
@@ -135,7 +137,7 @@ def pil_draw_shapes(image , draw , shapes_list , paperGeometry , background = No
                            geometry = paperGeometry , opacity = s["opacity"] , background = background)
 # for drawing strokes
 
-def _simple_stroke_shapes(pts , parameters = None):
+def simple_stroke_shapes(pts , parameters = None):
 
     if len(pts) < 4:
         return []
@@ -192,14 +194,20 @@ def _simple_stroke_shapes(pts , parameters = None):
                     ) , float(
                             (coord[j + 1 , 1] + vvect[j + 1 , 1]) 
                     )
-        
+       
+
         poly = {"type" : "polygon" , "points" : ((p1x , p1y) , (p2x , p2y) , (p3x , p3y) , (p4x , p4y)) , "color" : color , "opacity" : opacity}
-        
-        allshapes.append(poly)
+       
+        if not(math.isnan(p1x) or math.isnan(p1y) or \
+                math.isnan(p2x) or math.isnan(p2y) or \
+                math.isnan(p3x) or math.isnan(p3y) or \
+                math.isnan(p4x) or math.isnan(p4y)):
+            # replace the nan vvect with normal vectors
+            allshapes.append(poly)
         
     return allshapes
 
-def simple_stroke_shapes(pts , parameters = None):
+def _simple_stroke_shapes(pts , parameters = None):
 
     if len(pts) < 2:
         return []
