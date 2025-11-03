@@ -702,9 +702,9 @@ class RecordClient:
                 r , g , b  = self._paper_color
                 a = 255
                 frame_pil = PIL.Image.new(
-                                        mode = "RGBA" , 
+                                        mode = "RGB" , 
                                         size = (w_large , h_large) , 
-                                        color = (r , g , b , a))
+                                        color = (r , g , b))
                 frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                 draw.pil_draw_shapes(
                         frame_pil ,
@@ -728,9 +728,9 @@ class RecordClient:
                 r , g , b  = self._paper_color
                 a = 255
                 frame_pil = PIL.Image.new(
-                                        mode = "RGBA" , 
+                                        mode = "RGB" , 
                                         size = (w_large , h_large) , 
-                                        color = (r , g , b , a))
+                                        color = (r , g , b))
                 frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
                 draw.pil_draw_shapes(
                         frame_pil ,

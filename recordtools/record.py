@@ -254,17 +254,17 @@ class Record:
 
         if snd.shape[0] > 2 * fadenum:
             snd = snd[fadenum : -fadenum]
-            if snd.shape[0] > fadenum:
-                # todo, mask to __init__
-                mask = numpy.linspace(0.0 , 1.0 , fadenum)
-                shpe = list(snd.shape)
-                shpe[0] = fadenum
-                shpe = tuple(shpe)
-                mask = mask.reshape(shpe)
-
-                snd[:fadenum] = (snd[:fadenum] * mask).astype(snd.dtype)
-
-                snd[-fadenum:] = (snd[-fadenum:] * mask).astype(snd.dtype)
+            #if snd.shape[0] > fadenum:
+            #    # todo, mask to __init__
+            #    mask = numpy.linspace(0.0 , 1.0 , fadenum)
+            #    shpe = list(snd.shape)
+            #    shpe[0] = fadenum
+            #    shpe = tuple(shpe)
+            #    mask = mask.reshape(shpe)
+            #
+            #    snd[:fadenum] = (snd[:fadenum] * mask).astype(snd.dtype)
+            #
+            #    snd[-fadenum:] = (snd[-fadenum:] * mask).astype(snd.dtype)
 
         self._recordings[name] = snd
                 

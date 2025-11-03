@@ -87,14 +87,14 @@ def pil_circle(image , draw , x , y , r , geometry = None , color = None , opaci
     rad = r * (x1 - x0)
     r , b , g  = color
     a = opacity
-    draw.circle((cx , cy) , rad , fill = (r , b , g , a) , outline = (0 , 0 , 0 , 0) , width = 0)
+    draw.circle((cx , cy) , rad , fill = (r , b , g) , outline = (0 , 0 , 0) , width = 0)
 
 def pil_polygon(image , draw , *pts , geometry = None , color = None , opacity = None , background = None):
     x0 , y0 , x1 , y1 = geometry
     points = [(x0 + x * (x1 - x0) , y1 - y * (x1 - x0)) for (x , y) in pts]
     r , b , g = color
     a = opacity
-    draw.polygon(points , fill = (r , b , g , a) , outline = (0 , 0 , 0 , 0) , width = 0)
+    draw.polygon(points , fill = (r , b , g) , outline = (0 , 0 , 0) , width = 0)
 
 def pil_image(image , draw , data , x , y , w , h , geometry = None , opacity = None , background = None):
     x0 , y0 , x1 , y1 = geometry
