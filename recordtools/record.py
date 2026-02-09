@@ -316,6 +316,17 @@ class Record:
 
 
     def add_to_stroke(self , x , y , p , t , c):
+        """
+        Adds new data to the "current" stroke. If the stylus
+        pressure is 0 then a new stroke is added with a unique name.
+
+        Args:
+            x (float) : Coordinated of the stylus.
+            y (float) : Coordinated of the stylus.
+            p (float) : Pressure of the stylus:
+            t (float) : Time when this data was registered.
+            c (int) : Color of stroke.
+        """
         if p == 0:
             if len(self._stroke) > 1:
                 name = "s_" + str(self._unique)
@@ -340,6 +351,13 @@ class Record:
                 self._strokes["current"] = self._stroke
 
     def add_to_command(self , char):
+        """
+        Adds a character to the current command string. If the command string
+        is complete, it is executed.
+
+        Args:
+            char (chr) : Character to add to the current command string.
+        """
         if char == '\n':
             # commands with _ are reserved
             if len(self._command.strip()) > 0 and '_' not in self._command.strip():
@@ -355,14 +373,36 @@ class Record:
             self._command += char
 
     def add_command(self , command):
+        """
+        Adds a new state with the string `command` in the stack to the list
+        of states in this record. If `command` is a command then it is executed
+        and the list of states modified.
+
+        Args:
+            command (str) : Will end up on top of the new state's stack. If it is a command
+                            then it will be executed.
+        """
         state = self._states[-1]
         new_state = state.add_to_program(command)
         self._append(new_state)
 
     def get_current_command(self):
+        """
+        Return the current command string. This might be an incomplete command string.
+        """
         return copy.deepcopy(self._command)
 
     def modify_after_cursor(self , cursor , save_commands = True):
+        """
+        Remove saved states from the cursor position to the end.
+
+        Args:
+            cursor (int) : Position of cursor.
+            save_commands (bool) : If True (default) the deleted commands will be saved.
+
+        Returns:
+            A list of commands from the deleted states of None if save_commands is False.
+        """
         pos = cursor % len(self._states)
 
         if pos != 0:
@@ -385,15 +425,24 @@ class Record:
             return None
 
     def get_configuration(self):
+        """
+        Return a copy of the configuration associated with this record.
+        """
         return copy.deepcopy(self._configuration)
 
     def get_stroke(self , name):
+        """
+        Return stroke with name name. If no stroke with this name exists return None.
+        """
         if name in self._strokes:
             return copy.deepcopy(self._strokes[name])
         else:
             return None
     
     def get_image(self , name):
+        """
+        Returns image with name name. If no stroke with this name exists return None.
+        """
         if name in self._images:
             #todo return copy.deepcopy(self._images[name])
             return self._images[name]
@@ -401,6 +450,12 @@ class Record:
             return None
 
     def reexecute(self , cursor = None):
+        """
+        Reexecute last command.
+
+        TODO:
+            cursor argument is not used
+        """
         pos = len(self._states) - 1
         if cursor is not None:
             pos = cursor % len(self._states)
@@ -408,6 +463,9 @@ class Record:
         self._append(state)
 
     def get_type(self , s):
+        """
+        Return "stroke" if s is a stroke name, "image" if s is an image name, else return None.
+        """
         if s in self._strokes:
             return "stroke"
         if s in self._images:
@@ -415,6 +473,15 @@ class Record:
         return None
 
     def get_current_strokes_images(self , cursor = None):
+        """
+        Return a list of strokes or images in the state under the cursor.
+
+        Args:
+            cursor (None or int) : If None then the lates state will be used. Else the state under the cursor.
+
+        Returns: 
+            A list of strings. Each string is a stroke name or an image name.
+        """
         stack = None
         if cursor is None:
             stack = self._states[-1].get_stack()
@@ -423,16 +490,26 @@ class Record:
       
         return [s for s in stack if (s in self._strokes) or (s in self._images)]
 
-    def get_current_stack(self , cursor = None):
-        stack = None
-        if cursor is None:
-            stack = self._states[-1].get_stack()
-        else:
-            stack = self._states[cursor % len(self._states)].get_stack()
-      
-        return stack
+#    def get_current_stack(self , cursor = None):
+#        stack = None
+#        if cursor is None:
+#            stack = self._states[-1].get_stack()
+#        else:
+#            stack = self._states[cursor % len(self._states)].get_stack()
+#      
+#        return stack
 
     def get_frames(self , cursor = None):
+        """
+        Get dictionary related to curent state or state under cursor.
+
+        Args:
+            cursor (None or int) : If None then the lates state will be used. Else the state under the cursor.
+
+        Returns: 
+            None or a dictionary that may contain video frames 
+            (key "frames") or an audio recording (key "recording").
+        """
         state = None
         if cursor is None:
             state = self._states[-1]
@@ -446,6 +523,13 @@ class Record:
             return None
 
     def get_all_additional(self):
+        """
+        Returns a list of additional ojects attached to each state in the record.
+
+        Returns:
+            A list of dictionaries or None. Each dictionary may contain video frames 
+            (key "frames") or an audio recording (key "recording").
+        """
         f = []
         for s in self._states:
             additional = s.get_additional()
@@ -454,15 +538,33 @@ class Record:
         return f
 
     def __len__(self):
+        """
+        Returns the number of states in the record.
+        """
         return len(self._states)
 
     def __str__(self):
+        """
+        Returns a simple string representation of the record.
+        """
         statelist = "\n , ".join([str(self._states[i]) 
                  for i in range(len(self._states))])
         string = "Record(\n" + statelist + "\n)"
         return string
     
     def nicestr(self , cursor = None , width = 1000 , height = 1000 , additional = []):
+        """
+        Returns a pretty string representation of the record.
+
+        Args:
+            cursor (None or int) : The current position of the cursor in state list.
+            width (int) : Number of columns available for the text.
+            height (int) : Number of rows available for the text.
+            additional (list) : List of additional strings to add to the representation.
+
+        Returns: 
+            A representation of the record using a nicely formatted string.
+        """
         if len(self._states) == 0:
             return ""
 
