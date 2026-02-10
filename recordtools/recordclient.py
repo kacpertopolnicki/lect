@@ -1,3 +1,14 @@
+"""
+This module implements the RecordClient class. 
+It is a ... client ... of Record objects. Uses them
+to display images on the screen, create animations, etc.
+
+Todo / note: 
+    * Opacity is not working.
+
+"""
+
+
 import sys
 import pickle
 import pyglet

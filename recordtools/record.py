@@ -1,3 +1,18 @@
+"""
+This module implements the Record class. The main job 
+of objects of this class is to record the discreete lecture states.
+
+Todo / note: 
+    Methods that are considered private are used in `stackfunctions.py`.
+    Consider changing this. 
+
+Uses:
+    * state.py
+
+Used by:
+    * recordclient.py
+"""
+
 import copy
 import logging
 import os
@@ -9,6 +24,16 @@ from .state import State
 
 class Record:
     def __init__(self , configuration , dark_pallete = "default_pallete" , light_pallete = "default_pallete"):
+        """
+        Create an initialize a Record object. 
+
+        Args:
+            configuration (ConfigParser) : Configuration of the application. Initialized usualy in `lect`.
+            dark_pallete (str) : Name of pallete, read from the `configuration` with the dark colors.
+                Used mainly in `stackfunctions.py`.
+            light_pallete (str) : Name of pallete, read from the `configuration` with the light colors.
+                Used mainly in `stackfunctions.py`.
+        """
 
         # unique number for stroke and image names
 
@@ -102,6 +127,24 @@ class Record:
     # for hashing
 
     def _record_hash(self , f):
+        """
+        PRIVATE 
+        Used to memoize functions in the form g(r , stack , memory) where
+            * r is a Record object
+            * stack is a list of stack names
+            * memory is a dictionary in the form {<some name> : <some list of stroke names>, ...}
+        This method is used in `_set_functions` to decorate functions from the `stackfunctions` module.
+
+        Todo / note:
+            * The functions supplied to f calculate additional data in the form of a dictionary containing
+                frames or a recording (see documentation of State). These are not hashed.
+
+        Args:
+            f (function) : Function to be decorated.
+
+        Returns:
+            function : The decorated function that memoizes it's arguments.
+        """
         def g(r , stack , memory):
             #h = hash((tuple(stack) , f.__name__))
             # todo can this be improved
@@ -125,6 +168,9 @@ class Record:
     # PICKLE
 
     def __getstate__(self):
+        """
+        For the pickle module. Returns a tuple that can be used to reconstruct the state.
+        """
         return (self._unique ,
                 self._strokes , 
                 self._recordings ,
@@ -146,6 +192,9 @@ class Record:
                 self._hashed_function_values)
 
     def __setstate__(self , state):
+        """
+        For the pickle module. Reconstructs the state using a tuple of values.
+        """
         self._unique , self._strokes , self._recordings , self._images , \
         self._configuration , self._states , \
         self._dark_paper_color , self._dark_colors , self._light_paper_color , \
@@ -163,6 +212,13 @@ class Record:
     # modifies _states
 
     def _append(self , state):
+        """
+        PRIVATE
+        Appends a state to a list of state and executes functions from `stackfunctions`. Works recursively.
+
+        Args:
+            state (State) : State to append to list of states `self._states`.
+        """
         to_append = state
         if len(self._states) > 0:
             to_append = state.join_memories(self._states[-1])
@@ -174,7 +230,24 @@ class Record:
             self._append(new_state)
 
     def _make_equalish_time(self , frames , reco):
-        # todo, call this in _append instead of individual functions
+        """
+        PRIVATE
+        Make the length of the video frames match the length of the audio recording. 
+        After the operation the lengths are almost identical. The differences should
+        not result in detectable audio or video lag.
+
+        Todo / note: 
+            * Call this in _append instead of individual functions.
+            * Consider getting the room sound and using this to fill. 
+
+        Args:
+            frames (list) : List of frames for the video.
+            reco (Array) : Numpy array with sound amplitudes.
+
+        Returns:
+            tuple : New pair of (frames , reco). The lengths of the video and audio recording
+                should be almost identical.
+        """
         if reco is not None:
             animation_time = len(frames) / self._framerate
             recording_time = reco.shape[0] / self._samplerate
@@ -207,6 +280,11 @@ class Record:
     # _functions
 
     def _set_functions(self):
+        """
+        PRIVATE
+        Read in the functions from stackfunctions.py. Decorate them to make them memoize their arguments.
+        Add them to the self._functions dictionary.
+        """
         from recordtools import stackfunctions
         self._functions = dict()
         for x in stackfunctions.__dict__:
@@ -216,6 +294,23 @@ class Record:
     #
 
     def _add_full_stroke(self , points):
+        """
+        PRIVATE
+        Add a complete stroke to `self._strokes` dictionary. Give it a unique name.
+
+        Todo / note:
+            * The style of the stroke is identical for all points of a stroke. It was 
+            convenient to repeat this information but maybe consider changing this.
+
+        Args:
+            points (list) : Information about the stroke. Each element is a list
+                `[x , y , p , t , style]` containing the x , y coordinates of a 
+                stroke point, the pressure at this point, the time when this point
+                was registered and the style of the stroke.
+
+        Returns:
+            str : The unique name of the stroke.
+        """
 
         pts = copy.deepcopy(points)
 
@@ -229,6 +324,32 @@ class Record:
         return name
 
     def _add_full_image(self , image):
+        """
+        PRIVATE
+        Add image to `self._images` dictionary.
+
+        Todo / note:
+            * Check if the x , y coordinates of top left corner.
+            * Check the type of image data.
+            * Opacity is handled in a strange way.
+
+        Args:
+            image (dict) : Information about the image. The dictionary has the form:
+                ```
+                        {"type" : "image" ,
+                         "data" : <image data as numpy array, result of cv2.imread> , 
+                         "ar" : <image aspect ratio> , 
+                         "x0" : <x coordinate of top left corner> ,
+                         "y0" : <y coordinate of top left corner> ,
+                         "w" : <image width> ,
+                         "h" : <image height> ,
+                         "opacity" : <image opacity>}
+                ```
+
+        Returns:
+            str : The unique name of the image.
+
+        """
 
         name = "i_" + str(self._unique)
         self._unique += 1
@@ -242,6 +363,18 @@ class Record:
     # for interacting
 
     def add_sound(self , sound):
+        """
+        Adds audio recording to `self._recordings`.
+
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+            * Currently trims the beginning and ending of the recording
+                to get rid of any keyboard sounds.
+
+        Args: 
+            sound (Array) : Numpy Array with amplitudes.
+
+        """
 
         snd = sound.copy()
 
@@ -273,7 +406,27 @@ class Record:
         self._append(new_state)
 
     def add_image(self , image):
- 
+        """
+        Adds image recording to `self._images`.
+
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+            * Currently trims the beginning and ending of the recording
+                to get rid of any keyboard sounds.
+
+        Args: 
+            sound (Array) : Image data in numpy.Array format, result of cv2.imread. It will be turned into a dictionary with the form:
+                ```
+                        {"type" : "image" ,
+                         "data" : <image data as numpy array, result of cv2.imread> , 
+                         "ar" : <image aspect ratio> , 
+                         "x0" : <x coordinate of top left corner> ,
+                         "y0" : <y coordinate of top left corner> ,
+                         "w" : <image width> ,
+                         "h" : <image height> ,
+                         "opacity" : <image opacity>}
+
+        """
         if image.shape[2] == 3:
 
             img = image.copy()
@@ -320,6 +473,9 @@ class Record:
         Adds new data to the "current" stroke. If the stylus
         pressure is 0 then a new stroke is added with a unique name.
 
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+
         Args:
             x (float) : Coordinated of the stylus.
             y (float) : Coordinated of the stylus.
@@ -355,6 +511,9 @@ class Record:
         Adds a character to the current command string. If the command string
         is complete, it is executed.
 
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+
         Args:
             char (chr) : Character to add to the current command string.
         """
@@ -378,6 +537,9 @@ class Record:
         of states in this record. If `command` is a command then it is executed
         and the list of states modified.
 
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+
         Args:
             command (str) : Will end up on top of the new state's stack. If it is a command
                             then it will be executed.
@@ -389,6 +551,9 @@ class Record:
     def get_current_command(self):
         """
         Return the current command string. This might be an incomplete command string.
+
+        Todo / note:
+            * Used only in `_update_curses_screen` in `recordclient.py`.
         """
         return copy.deepcopy(self._command)
 
@@ -396,6 +561,9 @@ class Record:
         """
         Remove saved states from the cursor position to the end.
 
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+        
         Args:
             cursor (int) : Position of cursor.
             save_commands (bool) : If True (default) the deleted commands will be saved.
@@ -427,12 +595,18 @@ class Record:
     def get_configuration(self):
         """
         Return a copy of the configuration associated with this record.
+
+        Todo / note:
+            * Used only in `RecordClient` constructor.
         """
         return copy.deepcopy(self._configuration)
 
     def get_stroke(self , name):
         """
         Return stroke with name name. If no stroke with this name exists return None.
+
+        Todo / note:
+            * Used only in `on_draw` in `recordclient.py`.
         """
         if name in self._strokes:
             return copy.deepcopy(self._strokes[name])
@@ -442,6 +616,9 @@ class Record:
     def get_image(self , name):
         """
         Returns image with name name. If no stroke with this name exists return None.
+        
+        Todo / note:
+            * Used only in `on_draw` in `recordclient.py`.
         """
         if name in self._images:
             #todo return copy.deepcopy(self._images[name])
@@ -453,8 +630,9 @@ class Record:
         """
         Reexecute last command.
 
-        TODO:
-            cursor argument is not used
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+            * Cursor argument is not used.
         """
         pos = len(self._states) - 1
         if cursor is not None:
@@ -465,6 +643,10 @@ class Record:
     def get_type(self , s):
         """
         Return "stroke" if s is a stroke name, "image" if s is an image name, else return None.
+        
+        Todo / note:
+            * Used only in `on_draw` in `recordclient.py`.
+            * Add "recording" type?
         """
         if s in self._strokes:
             return "stroke"
@@ -476,11 +658,14 @@ class Record:
         """
         Return a list of strokes or images in the state under the cursor.
 
+        Todo / note:
+            * Used only in `on_draw` in `recordclient.py`.
+        
         Args:
             cursor (None or int) : If None then the lates state will be used. Else the state under the cursor.
 
         Returns: 
-            A list of strings. Each string is a stroke name or an image name.
+            list : A list of strings. Each string is a stroke name or an image name.
         """
         stack = None
         if cursor is None:
@@ -503,11 +688,14 @@ class Record:
         """
         Get dictionary related to curent state or state under cursor.
 
+        Todo / note:
+            * Used only in `on_key_release` in `recordclient.py`.
+        
         Args:
             cursor (None or int) : If None then the lates state will be used. Else the state under the cursor.
 
         Returns: 
-            None or a dictionary that may contain video frames 
+            None | dict :  Dictionary that may contain video frames 
             (key "frames") or an audio recording (key "recording").
         """
         state = None
@@ -525,6 +713,9 @@ class Record:
     def get_all_additional(self):
         """
         Returns a list of additional ojects attached to each state in the record.
+
+        Todo / note:
+            * Used only in `on_key_release` and `calculate_save` in `recordclient.py`.
 
         Returns:
             A list of dictionaries or None. Each dictionary may contain video frames 
@@ -563,7 +754,7 @@ class Record:
             additional (list) : List of additional strings to add to the representation.
 
         Returns: 
-            A representation of the record using a nicely formatted string.
+            str : A representation of the record using a nicely formatted string.
         """
         if len(self._states) == 0:
             return ""
