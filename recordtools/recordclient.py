@@ -716,7 +716,7 @@ class RecordClient:
                                         mode = "RGB" , 
                                         size = (w_large , h_large) , 
                                         color = (r , g , b))
-                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil , "RGBA")
                 draw.pil_draw_shapes(
                         frame_pil ,
                         frame_pil_draw ,
@@ -742,7 +742,7 @@ class RecordClient:
                                         mode = "RGB" , 
                                         size = (w_large , h_large) , 
                                         color = (r , g , b))
-                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil)
+                frame_pil_draw = PIL.ImageDraw.Draw(frame_pil , "RGBA")
                 draw.pil_draw_shapes(
                         frame_pil ,
                         frame_pil_draw ,
