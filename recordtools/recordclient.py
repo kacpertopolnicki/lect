@@ -526,46 +526,47 @@ class RecordClient:
                     elif symbol == ord(self._save):
                         all_additional = self._record.get_all_additional()
 
-                        len_all_frames = 0
-                        len_all_printout = 0
-                        for a in all_additional:
-                            if 'frames' in a:
-                                len_all_frames += len(a["frames"])
-                            if 'printout' in a:
-                                len_all_printout += 1
-                        try:
-                            fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-                            video = cv2.VideoWriter(
-                                    self._output_file , 
-                                    fourcc, 
-                                    self._frame_rate , 
-                                    (self._frame_width , self._frame_height)
-                                    )
+                        if len(all_additional) > 0:
+                            len_all_frames = 0
+                            len_all_printout = 0
+                            for a in all_additional:
+                                if 'frames' in a:
+                                    len_all_frames += len(a["frames"])
+                                if 'printout' in a:
+                                    len_all_printout += 1
+                            try:
+                                fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+                                video = cv2.VideoWriter(
+                                        self._output_file , 
+                                        fourcc, 
+                                        self._frame_rate , 
+                                        (self._frame_width , self._frame_height)
+                                        )
 
-                            all_recordings = []
-                            i_frame = [1]
-                            i_printout = [1]
+                                all_recordings = []
+                                i_frame = [1]
+                                i_printout = [1]
 
-                            for aa in all_additional:
-                                self._calculate_frames(aa , video , all_recordings,
-                                                       i_frame , i_printout,
-                                                       len_all_frames , len_all_printout,
-                                                       resolution = (self._frame_width , self._frame_height), 
-                                                       antialias = self._antialias)
+                                for aa in all_additional:
+                                    self._calculate_frames(aa , video , all_recordings,
+                                                           i_frame , i_printout,
+                                                           len_all_frames , len_all_printout,
+                                                           resolution = (self._frame_width , self._frame_height), 
+                                                           antialias = self._antialias)
 
-                            all_recordings = numpy.concatenate(all_recordings)
-                            with wave.open(self._audiopath, 'wb') as wf:
-                                wf.setnchannels(self._channels)
-                                wf.setsampwidth(numpy.dtype(self._dtype).itemsize)
-                                wf.setframerate(self._samplerate)
-                                wf.writeframes(all_recordings.tobytes())
+                                all_recordings = numpy.concatenate(all_recordings)
+                                with wave.open(self._audiopath, 'wb') as wf:
+                                    wf.setnchannels(self._channels)
+                                    wf.setsampwidth(numpy.dtype(self._dtype).itemsize)
+                                    wf.setframerate(self._samplerate)
+                                    wf.writeframes(all_recordings.tobytes())
 
-                        except Exception as e:
-                            video.release()
-                            raise e
-                        finally:
-                            video.release()
-                        self._status = None
+                            except Exception as e:
+                                video.release()
+                                raise e
+                            finally:
+                                video.release()
+                            self._status = None
                         
                     #elif symbol == pyglet.window.key.G:
                     elif symbol == ord(self._sound_record):
